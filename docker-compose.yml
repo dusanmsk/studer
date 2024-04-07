@@ -1,0 +1,34 @@
+version: '3'
+
+volumes:
+  influxdb_volume:
+  grafana_volume:
+
+services:
+
+#  influxdb:
+#    image: influxdb:1.8
+#    restart: unless-stopped
+#    ports:
+#      - "8083:8083"
+#      - "8086:8086"
+#      - "25826:25826/udp"
+#    volumes:
+#      - ${DATADIR}/influxdb:/var/lib/influxdb
+#
+#  grafana:
+#    image: grafana/grafana:7.2.2
+#    restart: unless-stopped
+#    ports:
+#      - "3000:3000"
+#    volumes:
+#      - ${DATADIR}/grafana:/var/lib/grafana
+#    user: "472"
+
+  studer2influx:
+    build: studer2influx
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${STUDER2INFLUX_XCOMLAN_LISTEN_PORT}:${STUDER2INFLUX_XCOMLAN_LISTEN_PORT}"
