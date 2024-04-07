@@ -72,7 +72,7 @@ while (True):
                     }
                 ]
                 influxClient.write_points(json_body)
-                log.debug(f"Written {influxValues}")
+                log.debug(f"Written {json_body}")
                 successRounds += 1
                 # each 20-th measurement log at info that everything is ok
                 if(successRounds % 20 == 0):
