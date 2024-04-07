@@ -1,0 +1,2 @@
+xcom-proto>=0.3.4
+influxdb>=5.3.1
