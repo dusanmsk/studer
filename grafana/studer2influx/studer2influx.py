@@ -1,6 +1,8 @@
 import traceback
 from datetime import datetime
+from enum import Enum
 
+import schedule
 from xcom_proto import XcomP as param
 from xcom_proto import XcomLANTCP
 from xcom_proto import XcomRS232
@@ -10,63 +12,59 @@ import os
 import sys
 import logging
 
+class Period(Enum):
+    HALF_DAY = 1        # 12 hours
+    HOURLY = 2          # 1 hour
+    QUARTER = 3         # 15 minutes
+    PERIODIC = 4        # every STUDER2INFLUX_PERIODIC_FREQUENCY_SEC seconds
+    PERIODIC_10 = 5     # every (STUDER2INFLUX_PERIODIC_FREQUENCY_SEC * 10) seconds
+
 # list of parameters to be read from devices
-# DAILY parameters are read every hour
-# PERIODIC parameters are read every STUDER2INFLUX_SAMPLING_FREQUENCY_SEC seconds
-
-XT_PARAMETERS_HOURLY = [
-    param.AC_ENERGY_IN_PREV_DAY,
-    param.AC_ENERGY_OUT_PREV_DAY,
-]
-XT_PARAMETERS_PERIODIC = [
-    param.AC_ENERGY_IN_CURR_DAY,
-    param.AC_ENERGY_OUT_CURR_DAY,
-    param.AC_FREQ_IN,
-    param.AC_FREQ_OUT,
-    param.AC_POWER_IN,
-    param.AC_POWER_OUT,
-    param.AC_VOLTAGE_IN,
-    param.AC_VOLTAGE_OUT,
-    param.AC_CURRENT_IN,
-    param.AC_CURRENT_OUT,
-    param.BATT_CYCLE_PHASE_XT
+XT_PARAMETERS = [
+    [ param.AC_ENERGY_IN_PREV_DAY, Period.HOURLY ],
+    [ param.AC_ENERGY_OUT_PREV_DAY, Period.HOURLY ],
+    [ param.AC_ENERGY_IN_CURR_DAY, Period.QUARTER ],
+    [ param.AC_ENERGY_OUT_CURR_DAY, Period.QUARTER ],
+    [ param.AC_FREQ_IN, Period.PERIODIC ],
+    [ param.AC_FREQ_OUT, Period.PERIODIC ],
+    [ param.AC_POWER_IN, Period.PERIODIC ],
+    [ param.AC_POWER_OUT, Period.PERIODIC ],
+    [ param.AC_VOLTAGE_IN, Period.PERIODIC ],
+    [ param.AC_VOLTAGE_OUT, Period.PERIODIC ],
+    [ param.AC_CURRENT_IN, Period.PERIODIC ],
+    [ param.AC_CURRENT_OUT, Period.PERIODIC ],
+    [ param.BATT_CYCLE_PHASE_XT, Period.PERIODIC ]
 ]
 
-BATTERY_PARAMETERS_HOURLY = [
-    param.BATT_CHARGE_PREV_DAY,
-    param.BATT_DISCHARGE_PREV_DAY
-]
-BATTERY_PARAMETERS_PERIODIC = [
-    param.BATT_VOLTAGE,
-    param.BATT_CURRENT,
-    param.BATT_SOC,
-    param.BATT_TEMP,
-    param.BATT_CYCLE_PHASE,
-    param.BATT_POWER,
-    param.BATT_CHARGE,
-    param.BATT_DISCHARGE
+BATTERY_PARAMETERS = [
+    [ param.BATT_CHARGE_PREV_DAY, Period.HOURLY ],
+    [ param.BATT_DISCHARGE_PREV_DAY, Period.HOURLY ],
+    [ param.BATT_VOLTAGE, Period.PERIODIC ],
+    [ param.BATT_CURRENT, Period.PERIODIC ],
+    [ param.BATT_SOC, Period.PERIODIC_10 ],
+    [ param.BATT_TEMP, Period.PERIODIC_10 ],
+    [ param.BATT_CYCLE_PHASE, Period.PERIODIC ],
+    [ param.BATT_POWER, Period.PERIODIC_10 ],
+    [ param.BATT_CHARGE, Period.PERIODIC_10 ],
+    [ param.BATT_DISCHARGE, Period.PERIODIC_10 ]
 ]
 
-VT_PARAMETERS_HOURLY = [
-    param.PV_ENERGY_PREV_DAY,
-    param.PV_SUN_HOURS_PREV_DAY
-]
-VT_PARAMETERS_PERIODIC = [
-    param.PV_VOLTAGE,
-    param.PV_POWER,
-    param.PV_ENERGY_CURR_DAY,
-    param.PV_ENERGY_TOTAL,
-    param.PV_SUN_HOURS_CURR_DAY
+VT_PARAMETERS = [
+    [ param.PV_ENERGY_PREV_DAY, Period.HOURLY ],
+    [ param.PV_SUN_HOURS_PREV_DAY, Period.HOURLY ],
+    [ param.PV_VOLTAGE, Period.PERIODIC ],
+    [ param.PV_POWER, Period.PERIODIC ],
+    [ param.PV_ENERGY_CURR_DAY,  Period.QUARTER ],
+    [ param.PV_ENERGY_TOTAL, Period.QUARTER ],
+    [ param.PV_SUN_HOURS_CURR_DAY, Period.HOURLY ],
     #param.PV_OPERATION_MODE,
     #param.PV_NEXT_EQUAL
 ]
 
-VS_PARAMETERS_HOURLY = [
-    param.VS_PV_ENERGY_PREV_DAY
-]
-VS_PARAMETERS_PERIODIC = [
-    param.VS_PV_POWER,
-    param.VS_PV_PROD
+VS_PARAMETERS = [
+    [ param.VS_PV_ENERGY_PREV_DAY, Period.HOURLY ],
+    [ param.VS_PV_POWER, Period.PERIODIC ],
+    [ param.VS_PV_PROD, Period.PERIODIC ]
 ]
 
 AVAILABLE_VT_ADDRESSES = []
@@ -74,7 +72,7 @@ AVAILABLE_VS_ADDRESSES = []
 AVAILABLE_XT_ADDRESSES = []
 
 INFLUX_DB_NAME = os.environ['STUDER2INFLUX_DB_NAME']
-SAMPLING_FREQUENCY_SEC = int(os.environ.get('STUDER2INFLUX_SAMPLING_FREQUENCY_SEC', '30'))
+SAMPLING_FREQUENCY_SEC = int(os.environ.get('STUDER2INFLUX_PERIODIC_FREQUENCY_SEC', '30'))
 DEBUG = os.environ['STUDER2INFLUX_DEBUG']
 INFLUXDB_HOST = os.environ['STUDER2INFLUX_INFLUXDB_HOST']
 INFLUXDB_PORT = os.environ['STUDER2INFLUX_INFLUXDB_PORT']
@@ -95,17 +93,6 @@ influxClient = InfluxDBClient(host=INFLUXDB_HOST, port=INFLUXDB_PORT, username=I
 influxClient.create_database(INFLUX_DB_NAME)
 influxClient.switch_database(INFLUX_DB_NAME)
 log.info("Connected to influxdb")
-
-lastReportedHour = -1
-def shouldReportHourly():
-    global lastReportedHour
-    now = datetime.now()
-    return now.hour != lastReportedHour
-
-def rememberReportHourly():
-    global lastReportedHour
-    now = datetime.now()
-    lastReportedHour = now.hour
 
 def findDevices(xcom):
     """
@@ -155,18 +142,34 @@ def findDevices(xcom):
             log.debug(f"Device {i} not found")
 
 
-def getValues(xcom, parameterList, deviceAddresses, deviceName, deviceAddressMask):
+def getValues(xcom, parameterList, deviceAddresses, periodType, deviceName, deviceAddressMask):
+    """
+       This function retrieves values of specified parameters from devices and prepares them for storage in InfluxDB.
 
+       Parameters:
+       xcom (object): An instance of the Xcom class, used to communicate with the devices.
+       parameterList (list): A list of parameters to be read from the devices. Each parameter is represented as a list where the first element is the parameter and the second element is the type of period.
+       deviceAddresses (list): A list of device addresses from which the parameters are to be read.
+       periodType (Period): The type of period for which the parameters are to be read.
+       deviceName (str): Device name that will be represented in influx json
+       deviceAddressMask (int): The mask value to be subtracted from the device address when reporting device index (for example querying devices 301, 302, 303, so deviceAddressMask is 300 and devices will be reported as 1,2,3).
+
+       Returns:
+       json_bodies (list): A list of JSON objects ready to be stored in InfluxDB. Each JSON object contains the measurement name, tags, and fields. The measurement name is set to "solar_data", tags contain the device name, and fields contain the measurements.
+       """
     json_bodies = []
     for deviceAddress in deviceAddresses:
         measurements = {}
-        for p in parameterList:
+        for i in parameterList:
             try:
-                value = xcom.getValue(p, deviceAddress)
-                name = p.name
-                measurements[name] = value
+                param = i[0]
+                period = i[1]
+                name = param.name
+                if period == periodType:
+                    value = xcom.getValue(param, deviceAddress)
+                    measurements[name] = value
             except:
-                log.error(f"Failed to get value {p.name} for {deviceAddress}")
+                log.error(f"Failed to get value {name} for device at address {deviceAddress}")
 
         if measurements:
             deviceIndex = deviceAddress - deviceAddressMask
@@ -185,32 +188,49 @@ def getValues(xcom, parameterList, deviceAddresses, deviceName, deviceAddressMas
 def logProgress(successRounds):
     # each 20-th measurement log at info that everything is ok
     if(successRounds % 20 == 0):
-        log.info(f"Successfully processed {successRounds} rounds")
+        log.info(f"Successfully processed {successRounds} periods")
     if(successRounds == 1):
         log.info(f"Started receiving studer data")
 
+def readParameters(xcom, periodType):
+    influxJsonBodies = []
+    influxJsonBodies.extend(getValues(xcom, BATTERY_PARAMETERS, [100], periodType, "battery", 100))
+    influxJsonBodies.extend(getValues(xcom, XT_PARAMETERS, AVAILABLE_XT_ADDRESSES, periodType, "XT", 100))
+    influxJsonBodies.extend(getValues(xcom, VT_PARAMETERS, AVAILABLE_VT_ADDRESSES, periodType, "VT", 300))
+    influxJsonBodies.extend(getValues(xcom, VS_PARAMETERS, AVAILABLE_VS_ADDRESSES, periodType, "VS", 700))
 
-def studer2influx():
-    while (True):
-        with XcomLANTCP(port=int(XCOMLAN_LISTEN_PORT)) if XCOMLAN_LISTEN_PORT else XcomRS232(serialDevice=XCOMRS232_SERIAL_PORT, baudrate=int(XCOMRS232_BAUD_RATE)) as xcom:
+    influxJsonBodies = [entry for entry in influxJsonBodies if entry]       # remove empty lists
+    influxClient.write_points(influxJsonBodies)
+
+def process15min(xcom):
+    log.info("Processing 15 minutes parameters")
+    readParameters(xcom, Period.QUARTER)
+
+def processHourly(xcom):
+    log.info("Processing hourly parameters")
+    readParameters(xcom, Period.HOURLY)
+
+def processHalfDay(xcom):
+    log.info("Processing half day parameters")
+    readParameters(xcom, Period.HALF_DAY)
+
+def main():
+    with XcomLANTCP(port=int(XCOMLAN_LISTEN_PORT)) if XCOMLAN_LISTEN_PORT else XcomRS232(serialDevice=XCOMRS232_SERIAL_PORT, baudrate=int(XCOMRS232_BAUD_RATE)) as xcom:
+        schedule.every(15).minutes.do(process15min, xcom=xcom)
+        schedule.every(1).hours.do(processHourly, xcom=xcom)
+        schedule.every(12).hours.do(processHalfDay, xcom=xcom)
+        while (True):
             findDevices(xcom)
             successRounds = 0
-            influxJsonBodies = []
             while True:
                 try:
-                    influxJsonBodies.extend(getValues(xcom, BATTERY_PARAMETERS_PERIODIC, [100], "battery", 100))
-                    influxJsonBodies.extend(getValues(xcom, XT_PARAMETERS_PERIODIC, AVAILABLE_XT_ADDRESSES, "XT", 100))
-                    influxJsonBodies.extend(getValues(xcom, VT_PARAMETERS_PERIODIC, AVAILABLE_VT_ADDRESSES, "VT", 300))
-                    influxJsonBodies.extend(getValues(xcom, VS_PARAMETERS_PERIODIC, AVAILABLE_VS_ADDRESSES, "VS", 700))
-                    if(shouldReportHourly()):
-                        influxJsonBodies.extend(getValues(xcom, BATTERY_PARAMETERS_HOURLY, [100], "battery", 100))
-                        influxJsonBodies.extend(getValues(xcom, XT_PARAMETERS_HOURLY, AVAILABLE_XT_ADDRESSES, "XT", 100))
-                        influxJsonBodies.extend(getValues(xcom, VT_PARAMETERS_HOURLY, AVAILABLE_VT_ADDRESSES, "VT", 300))
-                        influxJsonBodies.extend(getValues(xcom, VS_PARAMETERS_HOURLY, AVAILABLE_VS_ADDRESSES, "VS", 700))
-                        rememberReportHourly()
-
-                    influxJsonBodies = [entry for entry in influxJsonBodies if entry]       # remove empty lists
-                    influxClient.write_points(influxJsonBodies)
+                    readParameters(xcom, Period.PERIODIC)
+                    # when started, process all scheduled tasks
+                    if(successRounds == 0):
+                        schedule.run_all()
+                    if(successRounds % 10 == 0):
+                        readParameters(xcom, Period.PERIODIC_10)
+                    schedule.run_pending()
                     successRounds += 1
                     logProgress(successRounds)
                 except Exception as e:
@@ -221,4 +241,4 @@ def studer2influx():
             log.info("Reconnect")
 
 
-studer2influx()
+main()
