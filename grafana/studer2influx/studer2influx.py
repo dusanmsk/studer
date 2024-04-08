@@ -83,7 +83,12 @@ XCOMRS232_SERIAL_PORT = os.environ.get('STUDER2INFLUX_XCOMRS232_SERIAL_PORT', No
 XCOMRS232_BAUD_RATE = os.environ.get('STUDER2INFLUX_XCOMRS232_BAUD_RATE', None)
 
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG if DEBUG == "1" else logging.INFO)
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.DEBUG if DEBUG == "1" else logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 log = logging.getLogger("Studer2Influx")
 
 log.info("Started")
