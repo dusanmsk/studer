@@ -20,7 +20,7 @@ services:
       - INFLUXDB_USER_PASSWORD=grafana
 
   grafana:
-    image: grafana/grafana:9.3.6
+    image: grafana/grafana-oss
     restart: unless-stopped
     ports:
       - "3000:3000"
