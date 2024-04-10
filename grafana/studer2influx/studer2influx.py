@@ -7,7 +7,7 @@ from xcom_proto import XcomP as param
 from xcom_proto import XcomLANTCP
 from xcom_proto import XcomRS232
 from influxdb import InfluxDBClient
-from time import sleep
+from time import sleep, time
 import os
 import sys
 import logging
@@ -90,8 +90,9 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 log = logging.getLogger("Studer2Influx")
-
 log.info("Started")
+
+last_successful_operation = time.time()
 
 log.info("Connecting to influxdb")
 influxClient = InfluxDBClient(host=INFLUXDB_HOST, port=INFLUXDB_PORT, username=INFLUXDB_USERNAME, password=INFLUXDB_PASSWORD)
@@ -198,6 +199,7 @@ def logProgress(successRounds):
         log.info(f"Started receiving studer data")
 
 def readParameters(xcom, periodType):
+    global last_successful_operation
     influxJsonBodies = []
     influxJsonBodies.extend(getValues(xcom, BATTERY_PARAMETERS, [100], periodType, "battery", 100))
     influxJsonBodies.extend(getValues(xcom, XT_PARAMETERS, AVAILABLE_XT_ADDRESSES, periodType, "XT", 100))
@@ -206,6 +208,8 @@ def readParameters(xcom, periodType):
 
     influxJsonBodies = [entry for entry in influxJsonBodies if entry]       # remove empty lists
     influxClient.write_points(influxJsonBodies)
+    log.debug(f"Written to influx: {influxJsonBodies}")
+    last_successful_operation = time.time()
 
 def process15min(xcom):
     log.info("Processing 15 minutes parameters")
@@ -243,6 +247,9 @@ def main():
                     log.error(traceback.format_exc())
                 log.debug(f"Sleeping {SAMPLING_FREQUENCY_SEC} seconds")
                 sleep(SAMPLING_FREQUENCY_SEC)
+                if time.time() - last_successful_operation > 300:  # 5 minutes
+                    log.error("No successful operation in the last 5 minutes, exiting to be restarted by supervisor")
+                    sys.exit(1)
             log.info("Reconnect")
 
 
