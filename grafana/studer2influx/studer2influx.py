@@ -209,7 +209,7 @@ def readParameters(xcom, periodType):
     influxJsonBodies = [entry for entry in influxJsonBodies if entry]       # remove empty lists
     influxClient.write_points(influxJsonBodies)
     log.debug(f"Written to influx: {influxJsonBodies}")
-    last_successful_operation = time.time()
+    last_successful_operation = time()
 
 def process15min(xcom):
     log.info("Processing 15 minutes parameters")
@@ -247,7 +247,7 @@ def main():
                     log.error(traceback.format_exc())
                 log.debug(f"Sleeping {SAMPLING_FREQUENCY_SEC} seconds")
                 sleep(SAMPLING_FREQUENCY_SEC)
-                if time.time() - last_successful_operation > 300:  # 5 minutes
+                if time() - last_successful_operation > 300:  # 5 minutes
                     log.error("No successful operation in the last 5 minutes, exiting to be restarted by supervisor")
                     sys.exit(1)
             log.info("Reconnect")
