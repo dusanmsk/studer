@@ -92,7 +92,7 @@ logging.basicConfig(
 log = logging.getLogger("Studer2Influx")
 log.info("Started")
 
-last_successful_operation = time.time()
+last_successful_operation = time()
 
 log.info("Connecting to influxdb")
 influxClient = InfluxDBClient(host=INFLUXDB_HOST, port=INFLUXDB_PORT, username=INFLUXDB_USERNAME, password=INFLUXDB_PASSWORD)
