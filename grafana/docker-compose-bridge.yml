@@ -1,0 +1,11 @@
+version: '3.3'
+
+services:
+
+  studer2influx:
+    build: studer2influx
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${STUDER2INFLUX_XCOMLAN_LISTEN_PORT}:${STUDER2INFLUX_XCOMLAN_LISTEN_PORT}"

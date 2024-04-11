@@ -7,7 +7,7 @@ This docker-compose suite is used to collect data from Studer into Influx/Grafan
 - install docker and docker-compose on a linux computer (rpi (see notes for rpi), virtual, ...) where you want to run this instance
 - clone/[download](https://github.com/dusanmsk/studer/archive/refs/heads/main.zip) this repo there
 - copy 'example.env' file as '.env' and edit if required (modify DATADIR, STUDER2INFLUX_PERIODIC_FREQUENCY_SEC etc..)
-- run ./rebuild.sh
+- run ./bin/rebuild.sh
 
 ### Setup with XCOM-LAN
 
@@ -20,11 +20,11 @@ Connect computer serial port with xcom-rs232, then "TODO binding serial port to 
 
 ### Run docker-compose
 
-Enable debugging for a while (edit .env then set DEBUG=1). Now run docker in foreground `./run.sh` and watch for logs. You should see something like:
+Enable debugging for a while (edit .env then set DEBUG=1). Now run docker in foreground `./bin/run.sh` and watch for logs. You should see something like:
 
 `Written to influx: [{'measurement': 'solar_data', 'tags': {'deviceName': 'battery-0'}, 'fields': {'BATT_SOC': 99.0, 'BATT_TEMP': 26.296875,...`
 
-That means that data are successfully written into influx. Stop (CTRL+C) then disable debug and run again in background `./run.sh -d`
+That means that data are successfully written into influx. Stop (CTRL+C) then disable debug and run again in background `./bin/run.sh -d`
 
 ### Setup grafana
 
