@@ -73,6 +73,7 @@ AVAILABLE_XT_ADDRESSES = []
 
 INFLUX_DB_NAME = os.environ['STUDER2INFLUX_DB_NAME']
 SAMPLING_FREQUENCY_SEC = int(os.environ.get('STUDER2INFLUX_PERIODIC_FREQUENCY_SEC'))
+STUDER2INFLUX_EXIT_AFTER = SAMPLING_FREQUENCY_SEC = int(os.environ.get('STUDER2INFLUX_EXIT_AFTER'))
 DEBUG = os.environ['STUDER2INFLUX_DEBUG']
 INFLUXDB_HOST = os.environ['STUDER2INFLUX_INFLUXDB_HOST']
 INFLUXDB_PORT = os.environ['STUDER2INFLUX_INFLUXDB_PORT']
@@ -247,8 +248,8 @@ def main():
                     log.error(traceback.format_exc())
                 log.debug(f"Sleeping {SAMPLING_FREQUENCY_SEC} seconds")
                 sleep(SAMPLING_FREQUENCY_SEC)
-                if time() - last_successful_operation > 300:  # 5 minutes
-                    log.error("No successful operation in the last 5 minutes, exiting to be restarted by supervisor")
+                if time() - last_successful_operation > STUDER2INFLUX_EXIT_AFTER * SAMPLING_FREQUENCY_SEC:
+                    log.error(f"No successful operation in the last {STUDER2INFLUX_EXIT_AFTER} rounds, exiting (to be restarted by supervisor)")
                     sys.exit(1)
             log.info("Reconnect")
 
