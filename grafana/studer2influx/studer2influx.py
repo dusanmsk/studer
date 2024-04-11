@@ -1,3 +1,4 @@
+import socket
 import traceback
 from datetime import datetime
 from enum import Enum
@@ -73,7 +74,8 @@ AVAILABLE_XT_ADDRESSES = []
 
 INFLUX_DB_NAME = os.environ['STUDER2INFLUX_DB_NAME']
 SAMPLING_FREQUENCY_SEC = int(os.environ.get('STUDER2INFLUX_PERIODIC_FREQUENCY_SEC'))
-STUDER2INFLUX_EXIT_AFTER = SAMPLING_FREQUENCY_SEC = int(os.environ.get('STUDER2INFLUX_EXIT_AFTER'))
+STUDER2INFLUX_EXIT_AFTER_FAILS = int(os.environ.get('STUDER2INFLUX_EXIT_AFTER_FAILS'))
+STUDER2INFLUX_SOCKET_TIMEOUT = int(os.environ.get('STUDER2INFLUX_SOCKET_TIMEOUT'))
 DEBUG = os.environ['STUDER2INFLUX_DEBUG']
 INFLUXDB_HOST = os.environ['STUDER2INFLUX_INFLUXDB_HOST']
 INFLUXDB_PORT = os.environ['STUDER2INFLUX_INFLUXDB_PORT']
@@ -175,6 +177,9 @@ def getValues(xcom, parameterList, deviceAddresses, periodType, deviceName, devi
                 if period == periodType:
                     value = xcom.getValue(param, deviceAddress)
                     measurements[name] = value
+            except socket.timeout:      # on socket timeout, do not wait for timeout on every parameter and fail fast
+                log.error(f"Failed to get value {name} for device at address {deviceAddress}, socket timeout")
+                return []
             except:
                 log.error(f"Failed to get value {name} for device at address {deviceAddress}")
 
@@ -208,9 +213,10 @@ def readParameters(xcom, periodType):
     influxJsonBodies.extend(getValues(xcom, VS_PARAMETERS, AVAILABLE_VS_ADDRESSES, periodType, "VS", 700))
 
     influxJsonBodies = [entry for entry in influxJsonBodies if entry]       # remove empty lists
-    influxClient.write_points(influxJsonBodies)
-    log.debug(f"Written to influx: {influxJsonBodies}")
-    last_successful_operation = time()
+    if (influxJsonBodies):
+        influxClient.write_points(influxJsonBodies)
+        log.debug(f"Written to influx: {influxJsonBodies}")
+        last_successful_operation = time()
 
 def process15min(xcom):
     log.info("Processing 15 minutes parameters")
@@ -225,6 +231,7 @@ def processHalfDay(xcom):
     readParameters(xcom, Period.HALF_DAY)
 
 def main():
+    socket.setdefaulttimeout(STUDER2INFLUX_SOCKET_TIMEOUT)
     with XcomLANTCP(port=int(XCOMLAN_LISTEN_PORT)) if XCOMLAN_LISTEN_PORT else XcomRS232(serialDevice=XCOMRS232_SERIAL_PORT, baudrate=int(XCOMRS232_BAUD_RATE)) as xcom:
         schedule.every(15).minutes.do(process15min, xcom=xcom)
         schedule.every(1).hours.do(processHourly, xcom=xcom)
@@ -248,8 +255,9 @@ def main():
                     log.error(traceback.format_exc())
                 log.debug(f"Sleeping {SAMPLING_FREQUENCY_SEC} seconds")
                 sleep(SAMPLING_FREQUENCY_SEC)
-                if time() - last_successful_operation > STUDER2INFLUX_EXIT_AFTER * SAMPLING_FREQUENCY_SEC:
-                    log.error(f"No successful operation in the last {STUDER2INFLUX_EXIT_AFTER} rounds, exiting (to be restarted by supervisor)")
+                if time() - last_successful_operation > STUDER2INFLUX_EXIT_AFTER_FAILS * SAMPLING_FREQUENCY_SEC:
+                    log.error(f"No successful operation in the last {STUDER2INFLUX_EXIT_AFTER_FAILS} rounds, exiting in 30 seconds (to be restarted by supervisor)")
+                    sleep(30)
                     sys.exit(1)
             log.info("Reconnect")
 
