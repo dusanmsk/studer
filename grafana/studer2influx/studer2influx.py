@@ -42,10 +42,10 @@ BATTERY_PARAMETERS = [
     [ param.BATT_DISCHARGE_PREV_DAY, Period.HOURLY ],
     [ param.BATT_VOLTAGE, Period.PERIODIC ],
     [ param.BATT_CURRENT, Period.PERIODIC ],
+    [ param.BATT_POWER, Period.PERIODIC ],
     [ param.BATT_SOC, Period.PERIODIC_10 ],
     [ param.BATT_TEMP, Period.PERIODIC_10 ],
     [ param.BATT_CYCLE_PHASE, Period.PERIODIC ],
-    [ param.BATT_POWER, Period.PERIODIC_10 ],
     [ param.BATT_CHARGE, Period.PERIODIC_10 ],
     [ param.BATT_DISCHARGE, Period.PERIODIC_10 ]
 ]
