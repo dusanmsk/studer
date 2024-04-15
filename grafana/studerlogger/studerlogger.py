@@ -12,7 +12,7 @@ import os
 import sys
 import logging
 
-from grafana.studerlogger.measurementprocessors import InfluxDbMeasurementProcessor, UdpMeasurementProcessor, LoggingMeasurementProcessor, MqttMeasurementProcessor
+from measurementprocessors import InfluxDbMeasurementProcessor, UdpMeasurementProcessor, LoggingMeasurementProcessor, MqttMeasurementProcessor
 
 
 class Period(Enum):
@@ -88,7 +88,7 @@ INFLUX_DB_NAME = os.environ.get('STUDERLOGGER_INFLUX_DB_NAME')
 
 # udp properties
 STUDERLOGGER_UDP_HOST = os.environ.get('STUDERLOGGER_UDP_HOST')
-STUDERLOGGER_UDP_PORT = int(os.environ.get('STUDERLOGGER_UDP_PORT'))
+STUDERLOGGER_UDP_PORT = int(os.environ.get('STUDERLOGGER_UDP_PORT', -1))
 STUDERLOGGER_UDP_DELIMITER = os.environ.get('STUDERLOGGER_UDP_DELIMITER', '\n')
 
 STUDERLOGGER_MQTT_HOST = os.environ.get('STUDERLOGGER_MQTT_HOST')
@@ -111,7 +111,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-log = logging.getLogger("Studer2Influx")
+log = logging.getLogger("studerlogger")
 log.info("Started")
 
 last_successful_operation = time()

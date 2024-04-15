@@ -2,7 +2,7 @@ version: '3.3'
 
 services:
 
-  studer2influx:
+  studerlogger:
     build: studerlogger
     restart: unless-stopped
     env_file:
