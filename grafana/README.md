@@ -6,7 +6,7 @@ This docker-compose suite is used to collect data from Studer into Influx/Grafan
 
 - install docker and docker-compose on a linux computer (rpi (see notes for rpi), virtual, ...) where you want to run this instance
 - clone/[download](https://github.com/dusanmsk/studer/archive/refs/heads/main.zip) this repo there
-- copy 'example.env' file as '.env' and edit if required (modify DATADIR, STUDER2INFLUX_PERIODIC_FREQUENCY_SEC etc..)
+- copy 'example.env' file as '.env' and edit if required (modify STUDERLOGGER_DATADIR, STUDERLOGGER_PERIODIC_FREQUENCY_SEC etc..)
 - run ./bin/rebuild.sh
 
 ### Setup with XCOM-LAN

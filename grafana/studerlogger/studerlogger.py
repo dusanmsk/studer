@@ -1,24 +1,26 @@
 import socket
+import threading
 import traceback
-from datetime import datetime
 from enum import Enum
 
 import schedule
 from xcom_proto import XcomP as param
 from xcom_proto import XcomLANTCP
 from xcom_proto import XcomRS232
-from influxdb import InfluxDBClient
 from time import sleep, time
 import os
 import sys
 import logging
 
+from grafana.studerlogger.measurementprocessors import InfluxDbMeasurementProcessor, UdpMeasurementProcessor, LoggingMeasurementProcessor, MqttMeasurementProcessor
+
+
 class Period(Enum):
     HALF_DAY = 1        # 12 hours
     HOURLY = 2          # 1 hour
     QUARTER = 3         # 15 minutes
-    PERIODIC = 4        # every STUDER2INFLUX_PERIODIC_FREQUENCY_SEC seconds
-    PERIODIC_10 = 5     # every (STUDER2INFLUX_PERIODIC_FREQUENCY_SEC * 10) seconds
+    PERIODIC = 4        # every STUDERLOGGER_PERIODIC_FREQUENCY_SEC seconds
+    PERIODIC_10 = 5     # every (STUDERLOGGER_PERIODIC_FREQUENCY_SEC * 10) seconds
 
 # list of parameters to be read from devices
 XT_PARAMETERS = [
@@ -72,18 +74,35 @@ AVAILABLE_VT_ADDRESSES = []
 AVAILABLE_VS_ADDRESSES = []
 AVAILABLE_XT_ADDRESSES = []
 
-INFLUX_DB_NAME = os.environ['STUDER2INFLUX_DB_NAME']
-SAMPLING_FREQUENCY_SEC = int(os.environ.get('STUDER2INFLUX_PERIODIC_FREQUENCY_SEC'))
-STUDER2INFLUX_EXIT_AFTER_FAILS = int(os.environ.get('STUDER2INFLUX_EXIT_AFTER_FAILS'))
-STUDER2INFLUX_SOCKET_TIMEOUT = int(os.environ.get('STUDER2INFLUX_SOCKET_TIMEOUT'))
-DEBUG = os.environ['STUDER2INFLUX_DEBUG']
-INFLUXDB_HOST = os.environ['STUDER2INFLUX_INFLUXDB_HOST']
-INFLUXDB_PORT = os.environ['STUDER2INFLUX_INFLUXDB_PORT']
-INFLUXDB_USERNAME = os.environ['STUDER2INFLUX_INFLUXDB_USERNAME']
-INFLUXDB_PASSWORD = os.environ['STUDER2INFLUX_INFLUXDB_PASSWORD']
-XCOMLAN_LISTEN_PORT = os.environ.get('STUDER2INFLUX_XCOMLAN_LISTEN_PORT', None)
-XCOMRS232_SERIAL_PORT = os.environ.get('STUDER2INFLUX_XCOMRS232_SERIAL_PORT', None)
-XCOMRS232_BAUD_RATE = os.environ.get('STUDER2INFLUX_XCOMRS232_BAUD_RATE', None)
+SAMPLING_FREQUENCY_SEC = int(os.environ.get('STUDERLOGGER_PERIODIC_FREQUENCY_SEC'))
+STUDERLOGGER_EXIT_AFTER_FAILED_READS = int(os.environ.get('STUDERLOGGER_EXIT_AFTER_FAILED_READS'))
+
+DEBUG = os.environ.get('STUDERLOGGER_DEBUG')
+
+# influxdb properties
+INFLUXDB_HOST = os.environ.get('STUDERLOGGER_INFLUXDB_HOST')
+INFLUXDB_PORT = os.environ.get('STUDERLOGGER_INFLUXDB_PORT')
+INFLUXDB_USERNAME = os.environ.get('STUDERLOGGER_INFLUXDB_USERNAME')
+INFLUXDB_PASSWORD = os.environ.get('STUDERLOGGER_INFLUXDB_PASSWORD')
+INFLUX_DB_NAME = os.environ.get('STUDERLOGGER_INFLUX_DB_NAME')
+
+# udp properties
+STUDERLOGGER_UDP_HOST = os.environ.get('STUDERLOGGER_UDP_HOST')
+STUDERLOGGER_UDP_PORT = int(os.environ.get('STUDERLOGGER_UDP_PORT'))
+STUDERLOGGER_UDP_DELIMITER = os.environ.get('STUDERLOGGER_UDP_DELIMITER', '\n')
+
+STUDERLOGGER_MQTT_HOST = os.environ.get('STUDERLOGGER_MQTT_HOST')
+STUDERLOGGER_MQTT_PORT = int(os.environ.get('STUDERLOGGER_MQTT_PORT', -1))
+STUDERLOGGER_MQTT_TOPIC = os.environ.get('STUDERLOGGER_MQTT_TOPIC')
+STUDERLOGGER_MQTT_CLIENT_ID = os.environ.get('STUDERLOGGER_MQTT_CLIENT_ID', 'studer')
+
+# xcom properties
+XCOMLAN_LISTEN_PORT = os.environ.get('STUDERLOGGER_XCOMLAN_LISTEN_PORT')
+STUDERLOGGER_XCOMLAN_SOCKET_TIMEOUT = int(os.environ.get('STUDERLOGGER_XCOMLAN_SOCKET_TIMEOUT'))
+XCOMRS232_SERIAL_PORT = os.environ.get('STUDERLOGGER_XCOMRS232_SERIAL_PORT')
+XCOMRS232_BAUD_RATE = os.environ.get('STUDERLOGGER_XCOMRS232_BAUD_RATE')
+
+STUDERLOGGER_LOG_PAYLOADS = os.environ.get('STUDERLOGGER_LOG_PAYLOADS', 0)
 
 
 logging.basicConfig(
@@ -97,11 +116,18 @@ log.info("Started")
 
 last_successful_operation = time()
 
-log.info("Connecting to influxdb")
-influxClient = InfluxDBClient(host=INFLUXDB_HOST, port=INFLUXDB_PORT, username=INFLUXDB_USERNAME, password=INFLUXDB_PASSWORD)
-influxClient.create_database(INFLUX_DB_NAME)
-influxClient.switch_database(INFLUX_DB_NAME)
-log.info("Connected to influxdb")
+
+measurementProcessors = []
+if INFLUXDB_HOST and INFLUXDB_PORT:
+    measurementProcessors.append(InfluxDbMeasurementProcessor(INFLUXDB_HOST, INFLUXDB_PORT, INFLUXDB_USERNAME, INFLUXDB_PASSWORD, INFLUX_DB_NAME))
+if STUDERLOGGER_UDP_HOST and STUDERLOGGER_UDP_PORT:
+    measurementProcessors.append(UdpMeasurementProcessor(STUDERLOGGER_UDP_HOST, STUDERLOGGER_UDP_PORT, STUDERLOGGER_UDP_DELIMITER))
+if STUDERLOGGER_MQTT_HOST and STUDERLOGGER_MQTT_PORT and STUDERLOGGER_MQTT_TOPIC:
+    measurementProcessors.append(MqttMeasurementProcessor(STUDERLOGGER_MQTT_HOST, STUDERLOGGER_MQTT_PORT, STUDERLOGGER_MQTT_TOPIC, STUDERLOGGER_MQTT_CLIENT_ID))
+if STUDERLOGGER_LOG_PAYLOADS == 1:
+    measurementProcessors.append(LoggingMeasurementProcessor())
+
+log.info("Registered measurement processors: %s", ", ".join([type(mp).__name__ for mp in measurementProcessors]))
 
 def findDevices(xcom):
     """
@@ -213,9 +239,10 @@ def readParameters(xcom, periodType):
     influxJsonBodies.extend(getValues(xcom, VS_PARAMETERS, AVAILABLE_VS_ADDRESSES, periodType, "VS", 700))
 
     influxJsonBodies = [entry for entry in influxJsonBodies if entry]       # remove empty lists
-    if (influxJsonBodies):
-        influxClient.write_points(influxJsonBodies)
-        log.debug(f"Written to influx: {influxJsonBodies}")
+    if (influxJsonBodies):      # distribute data in threads, do not wait for all threads to finish (to prevent blocking other processors for example with dead mqtt server etc...)
+        for measurementProcessor in measurementProcessors:
+            thread = threading.Thread(target=measurementProcessor.processMeasurements, args=(influxJsonBodies,))
+            thread.start()
         last_successful_operation = time()
 
 def process15min(xcom):
@@ -231,7 +258,7 @@ def processHalfDay(xcom):
     readParameters(xcom, Period.HALF_DAY)
 
 def main():
-    socket.setdefaulttimeout(STUDER2INFLUX_SOCKET_TIMEOUT)
+    socket.setdefaulttimeout(STUDERLOGGER_XCOMLAN_SOCKET_TIMEOUT)
     with XcomLANTCP(port=int(XCOMLAN_LISTEN_PORT)) if XCOMLAN_LISTEN_PORT else XcomRS232(serialDevice=XCOMRS232_SERIAL_PORT, baudrate=int(XCOMRS232_BAUD_RATE)) as xcom:
         schedule.every(15).minutes.do(process15min, xcom=xcom)
         schedule.every(1).hours.do(processHourly, xcom=xcom)
@@ -255,8 +282,8 @@ def main():
                     log.error(traceback.format_exc())
                 log.debug(f"Sleeping {SAMPLING_FREQUENCY_SEC} seconds")
                 sleep(SAMPLING_FREQUENCY_SEC)
-                if time() - last_successful_operation > STUDER2INFLUX_EXIT_AFTER_FAILS * SAMPLING_FREQUENCY_SEC:
-                    log.error(f"No successful operation in the last {STUDER2INFLUX_EXIT_AFTER_FAILS} rounds, exiting in 30 seconds (to be restarted by supervisor)")
+                if time() - last_successful_operation > STUDERLOGGER_EXIT_AFTER_FAILED_READS * SAMPLING_FREQUENCY_SEC:
+                    log.error(f"No successful operation in the last {STUDERLOGGER_EXIT_AFTER_FAILED_READS} rounds, exiting in 30 seconds (to be restarted by supervisor)")
                     sleep(30)
                     sys.exit(1)
             log.info("Reconnect")

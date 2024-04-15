@@ -14,7 +14,7 @@ services:
       - "8086:8086"
       - "25826:25826/udp"
     volumes:
-      - ${DATADIR}/influxdb:/var/lib/influxdb
+      - ${STUDERLOGGER_DATADIR}/influxdb:/var/lib/influxdb
     environment:
       - INFLUXDB_USER=grafana
       - INFLUXDB_USER_PASSWORD=grafana
@@ -25,13 +25,21 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ${DATADIR}/grafana:/var/lib/grafana
+      - ${STUDERLOGGER_DATADIR}/grafana:/var/lib/grafana
     user: "0"
 
+  mosquitto:
+    build: mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+
+
   studer2influx:
-    build: studer2influx
+    build: studerlogger
     restart: unless-stopped
     env_file:
       - .env
     ports:
-      - "${STUDER2INFLUX_XCOMLAN_LISTEN_PORT}:${STUDER2INFLUX_XCOMLAN_LISTEN_PORT}"
+      - "${STUDERLOGGER_XCOMLAN_LISTEN_PORT}:${STUDERLOGGER_XCOMLAN_LISTEN_PORT}"
