@@ -1,4 +1,53 @@
 {
+  "__inputs": [
+    {
+      "name": "DS_INFLUXDB_STUDER",
+      "label": "Influxdb_studer",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "influxdb",
+      "pluginName": "InfluxDB"
+    },
+    {
+      "name": "DS_EXPRESSION",
+      "label": "Expression",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "__expr__"
+    }
+  ],
+  "__elements": {},
+  "__requires": [
+    {
+      "type": "datasource",
+      "id": "__expr__",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "gauge",
+      "name": "Gauge",
+      "version": ""
+    },
+    {
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "10.4.1"
+    },
+    {
+      "type": "datasource",
+      "id": "influxdb",
+      "name": "InfluxDB",
+      "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    }
+  ],
   "annotations": {
     "list": [
       {
@@ -24,14 +73,519 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 1,
+  "id": null,
   "links": [],
   "liveNow": false,
   "panels": [
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "cI8KTzaSz"
+        "uid": "${DS_INFLUXDB_STUDER}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*power.*/i"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kwatt"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*temperature.*/i"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "celsius"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.*SOC.*/"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "I"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "PV Power"
+              },
+              {
+                "id": "unit",
+                "value": "kwatt"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "J"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Bilance"
+              },
+              {
+                "id": "unit",
+                "value": "kwatt"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 11,
+      "options": {
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "sizing": "auto"
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "alias": "Battery SOC",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "BATT_SOC"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Battery Temperature",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "BATT_TEMP"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Battery Current",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "C",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "BATT_CURRENT"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Battery Power",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "F",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "BATT_POWER"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  " / 1000"
+                ],
+                "type": "math"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "XTM1 Power OUT",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "D",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "AC_POWER_OUT"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "deviceName::tag",
+              "operator": "=",
+              "value": "XT-1"
+            }
+          ]
+        },
+        {
+          "alias": "XTM2 Power OUT",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "E",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "AC_POWER_OUT"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "deviceName::tag",
+              "operator": "=",
+              "value": "XT-2"
+            }
+          ]
+        },
+        {
+          "alias": "PV_POWER_VT1",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": true,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "G",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "PV_POWER"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "deviceName::tag",
+              "operator": "=",
+              "value": "VT-1"
+            }
+          ]
+        },
+        {
+          "alias": "PV_POWER_VT2",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": true,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "H",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "PV_POWER"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "deviceName::tag",
+              "operator": "=",
+              "value": "VT-2"
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "__expr__",
+            "uid": "${DS_EXPRESSION}"
+          },
+          "expression": "$G + $H",
+          "hide": false,
+          "refId": "I",
+          "type": "math"
+        },
+        {
+          "datasource": {
+            "type": "__expr__",
+            "uid": "${DS_EXPRESSION}"
+          },
+          "expression": "$G + $H - ($D + $E)",
+          "hide": false,
+          "refId": "J",
+          "type": "math"
+        }
+      ],
+      "title": "Battery SOC",
+      "type": "gauge"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB_STUDER}"
       },
       "fieldConfig": {
         "defaults": {
@@ -39,10 +593,12 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "KW",
+            "axisLabel": "",
             "axisPlacement": "auto",
+            "axisSoftMin": 0,
             "barAlignment": 0,
             "drawStyle": "bars",
             "fillOpacity": 53,
@@ -52,6 +608,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -143,7 +700,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 10
       },
       "id": 2,
       "options": {
@@ -167,7 +724,7 @@
           "alias": "XTM1 AC power OUT",
           "datasource": {
             "type": "influxdb",
-            "uid": "cI8KTzaSz"
+            "uid": "${DS_INFLUXDB_STUDER}"
           },
           "groupBy": [
             {
@@ -217,7 +774,7 @@
           "alias": "XTM2 AC power OUT",
           "datasource": {
             "type": "influxdb",
-            "uid": "cI8KTzaSz"
+            "uid": "${DS_INFLUXDB_STUDER}"
           },
           "groupBy": [
             {
@@ -267,7 +824,7 @@
           "alias": "XTM1 AC current OUT",
           "datasource": {
             "type": "influxdb",
-            "uid": "cI8KTzaSz"
+            "uid": "${DS_INFLUXDB_STUDER}"
           },
           "groupBy": [
             {
@@ -317,7 +874,7 @@
           "alias": "XTM2 AC current OUT",
           "datasource": {
             "type": "influxdb",
-            "uid": "cI8KTzaSz"
+            "uid": "${DS_INFLUXDB_STUDER}"
           },
           "groupBy": [
             {
@@ -370,7 +927,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "cI8KTzaSz"
+        "uid": "${DS_INFLUXDB_STUDER}"
       },
       "fieldConfig": {
         "defaults": {
@@ -378,10 +935,13 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "KW",
+            "axisLabel": "",
             "axisPlacement": "auto",
+            "axisSoftMax": 8,
+            "axisSoftMin": 0,
             "barAlignment": 0,
             "drawStyle": "bars",
             "fillOpacity": 53,
@@ -391,6 +951,322 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "kwatt"
+        },
+        "overrides": [
+          {
+            "__systemRef": "hideSeriesFrom",
+            "matcher": {
+              "id": "byNames",
+              "options": {
+                "mode": "exclude",
+                "names": [
+                  "XTM1 AC power IN",
+                  "XTM2 AC power IN"
+                ],
+                "prefix": "All except:",
+                "readOnly": true
+              }
+            },
+            "properties": [
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "id": 3,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max",
+            "min"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "alias": "XTM1 AC power IN",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT mean(\"AC_CURRENT_OUT\") FROM \"solar_data\" WHERE (\"deviceName\" = '${deviceName}') AND $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": false,
+          "refId": "C",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "AC_POWER_IN"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "distinct"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "deviceName",
+              "operator": "=",
+              "value": "XT-1"
+            }
+          ]
+        },
+        {
+          "alias": "XTM2 AC power IN",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT mean(\"AC_CURRENT_OUT\") FROM \"solar_data\" WHERE (\"deviceName\" = '${deviceName}') AND $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": false,
+          "refId": "G",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "AC_POWER_IN"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "distinct"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "deviceName",
+              "operator": "=",
+              "value": "XT-2"
+            }
+          ]
+        },
+        {
+          "alias": "XTM1 AC current IN",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT mean(\"AC_CURRENT_OUT\") FROM \"solar_data\" WHERE (\"deviceName\" = '${deviceName}') AND $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": false,
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "AC_CURRENT_IN"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "distinct"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "deviceName",
+              "operator": "=",
+              "value": "XT-1"
+            }
+          ]
+        },
+        {
+          "alias": "XTM2 AC current IN",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT mean(\"AC_CURRENT_OUT\") FROM \"solar_data\" WHERE (\"deviceName\" = '${deviceName}') AND $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": false,
+          "refId": "F",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "AC_CURRENT_IN"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "distinct"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "deviceName",
+              "operator": "=",
+              "value": "XT-2"
+            }
+          ]
+        }
+      ],
+      "title": "Invertors - power in",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB_STUDER}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "KW",
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 53,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 5,
@@ -457,7 +1333,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 12
+        "y": 33
       },
       "id": 4,
       "options": {
@@ -481,7 +1357,7 @@
           "alias": "VT1 PV power",
           "datasource": {
             "type": "influxdb",
-            "uid": "cI8KTzaSz"
+            "uid": "${DS_INFLUXDB_STUDER}"
           },
           "groupBy": [
             {
@@ -531,7 +1407,7 @@
           "alias": "VT2 PV power",
           "datasource": {
             "type": "influxdb",
-            "uid": "cI8KTzaSz"
+            "uid": "${DS_INFLUXDB_STUDER}"
           },
           "groupBy": [
             {
@@ -584,7 +1460,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "cI8KTzaSz"
+        "uid": "${DS_INFLUXDB_STUDER}"
       },
       "fieldConfig": {
         "defaults": {
@@ -594,6 +1470,7 @@
             "seriesBy": "last"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -609,6 +1486,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 2,
@@ -630,8 +1508,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -647,7 +1524,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 45
       },
       "id": 5,
       "options": {
@@ -667,7 +1544,7 @@
           "alias": "Battery SOC",
           "datasource": {
             "type": "influxdb",
-            "uid": "cI8KTzaSz"
+            "uid": "${DS_INFLUXDB_STUDER}"
           },
           "groupBy": [
             {
@@ -714,7 +1591,7 @@
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "cI8KTzaSz"
+        "uid": "${DS_INFLUXDB_STUDER}"
       },
       "fieldConfig": {
         "defaults": {
@@ -724,6 +1601,7 @@
             "seriesBy": "last"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": true,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -739,6 +1617,7 @@
               "tooltip": false,
               "viz": false
             },
+            "insertNulls": false,
             "lineInterpolation": "smooth",
             "lineWidth": 1,
             "pointSize": 2,
@@ -760,8 +1639,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -771,13 +1649,83 @@
           },
           "unit": "amp"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*current.*"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "amp"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "dark-orange",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.axisColorMode",
+                "value": "series"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*temperature.*"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "celsius"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "light-purple",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.axisColorMode",
+                "value": "series"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*voltage.*"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "volt"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "green",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.axisColorMode",
+                "value": "series"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 36
+        "y": 57
       },
       "id": 6,
       "options": {
@@ -797,7 +1745,7 @@
           "alias": "Battery current",
           "datasource": {
             "type": "influxdb",
-            "uid": "cI8KTzaSz"
+            "uid": "${DS_INFLUXDB_STUDER}"
           },
           "groupBy": [
             {
@@ -836,15 +1784,103 @@
             ]
           ],
           "tags": []
+        },
+        {
+          "alias": "Battery temperature",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT distinct(\"AC_POWER_OUT\") FROM \"solar_data\" WHERE (\"deviceName\" = 'XT-1') AND $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": false,
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "BATT_TEMP"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "distinct"
+              }
+            ]
+          ],
+          "tags": []
+        },
+        {
+          "alias": "Battery voltage",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "SELECT distinct(\"AC_POWER_OUT\") FROM \"solar_data\" WHERE (\"deviceName\" = 'XT-1') AND $timeFilter GROUP BY time($__interval) fill(null)",
+          "rawQuery": false,
+          "refId": "C",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "BATT_VOLTAGE"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "distinct"
+              }
+            ]
+          ],
+          "tags": []
         }
       ],
-      "title": "Battery current",
+      "title": "Battery",
       "type": "timeseries"
     },
     {
       "datasource": {
         "type": "influxdb",
-        "uid": "cI8KTzaSz"
+        "uid": "${DS_INFLUXDB_STUDER}"
       },
       "fieldConfig": {
         "defaults": {
@@ -852,20 +1888,223 @@
             "mode": "palette-classic"
           },
           "custom": {
+            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
-            "drawStyle": "bars",
-            "fillOpacity": 53,
+            "drawStyle": "line",
+            "fillOpacity": 0,
             "gradientMode": "none",
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
             },
-            "lineInterpolation": "smooth",
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "kwatth"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 69
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": true,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "PV_ENERGY_TOTAL"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "* 1000"
+                ],
+                "type": "math"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "deviceName::tag",
+              "operator": "=",
+              "value": "VT-1"
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "$__interval"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": true,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "PV_ENERGY_TOTAL"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [
+                  "* 1000"
+                ],
+                "type": "math"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "deviceName::tag",
+              "operator": "=",
+              "value": "VT-2"
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "__expr__",
+            "uid": "${DS_EXPRESSION}"
+          },
+          "expression": "$A + $B",
+          "hide": false,
+          "refId": "C",
+          "type": "math"
+        }
+      ],
+      "title": "PV Power total",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB_STUDER}"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "axisSoftMin": 0,
+            "barAlignment": -1,
+            "drawStyle": "bars",
+            "fillOpacity": 52,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
@@ -886,8 +2125,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
-                "value": null
+                "color": "green"
               },
               {
                 "color": "red",
@@ -896,49 +2134,226 @@
             ]
           }
         },
-        "overrides": [
-          {
-            "__systemRef": "hideSeriesFrom",
-            "matcher": {
-              "id": "byNames",
-              "options": {
-                "mode": "exclude",
-                "names": [
-                  "XTM1 AC power IN",
-                  "XTM2 AC power IN"
-                ],
-                "prefix": "All except:",
-                "readOnly": true
-              }
-            },
-            "properties": [
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": true
-                }
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
-        "h": 11,
+        "h": 9,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 78
       },
-      "id": 3,
+      "hideTimeOverride": false,
+      "id": 9,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull",
-            "max",
-            "min"
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "10.4.1",
+      "targets": [
+        {
+          "alias": "Daily VT-1",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "1d"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
           ],
-          "displayMode": "table",
+          "hide": false,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select max(PV_ENERGY_PREV_DAY) from solar_data where deviceName='VT-1' and time > now() - 7d group by time(1d)\n",
+          "rawQuery": true,
+          "refId": "A",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "PV_ENERGY_TOTAL"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [],
+                "type": "difference"
+              },
+              {
+                "params": [
+                  "* 1000"
+                ],
+                "type": "math"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "deviceName::tag",
+              "operator": "=",
+              "value": "VT-1"
+            }
+          ]
+        },
+        {
+          "alias": "Daily VT-2",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "${DS_INFLUXDB_STUDER}"
+          },
+          "groupBy": [
+            {
+              "params": [
+                "1d"
+              ],
+              "type": "time"
+            },
+            {
+              "params": [
+                "null"
+              ],
+              "type": "fill"
+            }
+          ],
+          "hide": false,
+          "measurement": "solar_data",
+          "orderByTime": "ASC",
+          "policy": "default",
+          "query": "select max(PV_ENERGY_PREV_DAY) from solar_data where deviceName='VT-2' and time > now() - 7d group by time(1d)\n",
+          "rawQuery": true,
+          "refId": "B",
+          "resultFormat": "time_series",
+          "select": [
+            [
+              {
+                "params": [
+                  "PV_ENERGY_TOTAL"
+                ],
+                "type": "field"
+              },
+              {
+                "params": [],
+                "type": "mean"
+              },
+              {
+                "params": [],
+                "type": "difference"
+              },
+              {
+                "params": [
+                  "* 1000"
+                ],
+                "type": "math"
+              }
+            ]
+          ],
+          "tags": [
+            {
+              "key": "deviceName::tag",
+              "operator": "=",
+              "value": "VT-1"
+            }
+          ]
+        }
+      ],
+      "timeFrom": "7d",
+      "title": "PV daily statistics",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "influxdb",
+        "uid": "${DS_INFLUXDB_STUDER}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 52,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green"
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "mwatth"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 87
+      },
+      "id": 10,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
@@ -949,15 +2364,15 @@
       },
       "targets": [
         {
-          "alias": "XTM1 AC power IN",
+          "alias": "Hourly VT-1",
           "datasource": {
             "type": "influxdb",
-            "uid": "cI8KTzaSz"
+            "uid": "${DS_INFLUXDB_STUDER}"
           },
           "groupBy": [
             {
               "params": [
-                "$__interval"
+                "1d"
               ],
               "type": "time"
             },
@@ -972,92 +2387,52 @@
           "measurement": "solar_data",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"AC_CURRENT_OUT\") FROM \"solar_data\" WHERE (\"deviceName\" = '${deviceName}') AND $timeFilter GROUP BY time($__interval) fill(null)",
-          "rawQuery": false,
-          "refId": "C",
+          "query": "select difference(max(PV_ENERGY_TOTAL)) from solar_data where deviceName='VT-1' and  $timeFilter group by time(1h)\n",
+          "rawQuery": true,
+          "refId": "A",
           "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "AC_POWER_IN"
+                  "PV_ENERGY_TOTAL"
                 ],
                 "type": "field"
               },
               {
                 "params": [],
-                "type": "distinct"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "deviceName",
-              "operator": "=",
-              "value": "XT-1"
-            }
-          ]
-        },
-        {
-          "alias": "XTM2 AC power IN",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "cI8KTzaSz"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "hide": false,
-          "measurement": "solar_data",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "query": "SELECT mean(\"AC_CURRENT_OUT\") FROM \"solar_data\" WHERE (\"deviceName\" = '${deviceName}') AND $timeFilter GROUP BY time($__interval) fill(null)",
-          "rawQuery": false,
-          "refId": "G",
-          "resultFormat": "time_series",
-          "select": [
-            [
+                "type": "mean"
+              },
+              {
+                "params": [],
+                "type": "difference"
+              },
               {
                 "params": [
-                  "AC_POWER_IN"
+                  "* 1000"
                 ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "distinct"
+                "type": "math"
               }
             ]
           ],
           "tags": [
             {
-              "key": "deviceName",
+              "key": "deviceName::tag",
               "operator": "=",
-              "value": "XT-2"
+              "value": "VT-1"
             }
           ]
         },
         {
-          "alias": "XTM1 AC current IN",
+          "alias": "Hourly VT-2",
           "datasource": {
             "type": "influxdb",
-            "uid": "cI8KTzaSz"
+            "uid": "${DS_INFLUXDB_STUDER}"
           },
           "groupBy": [
             {
               "params": [
-                "$__interval"
+                "1d"
               ],
               "type": "time"
             },
@@ -1072,90 +2447,49 @@
           "measurement": "solar_data",
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "SELECT mean(\"AC_CURRENT_OUT\") FROM \"solar_data\" WHERE (\"deviceName\" = '${deviceName}') AND $timeFilter GROUP BY time($__interval) fill(null)",
-          "rawQuery": false,
+          "query": "select difference(max(PV_ENERGY_TOTAL)) from solar_data where deviceName='VT-2' and  $timeFilter group by time(1h)\n",
+          "rawQuery": true,
           "refId": "B",
           "resultFormat": "time_series",
           "select": [
             [
               {
                 "params": [
-                  "AC_CURRENT_IN"
+                  "PV_ENERGY_TOTAL"
                 ],
                 "type": "field"
               },
               {
                 "params": [],
-                "type": "distinct"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "deviceName",
-              "operator": "=",
-              "value": "XT-1"
-            }
-          ]
-        },
-        {
-          "alias": "XTM2 AC current IN",
-          "datasource": {
-            "type": "influxdb",
-            "uid": "cI8KTzaSz"
-          },
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "hide": false,
-          "measurement": "solar_data",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "query": "SELECT mean(\"AC_CURRENT_OUT\") FROM \"solar_data\" WHERE (\"deviceName\" = '${deviceName}') AND $timeFilter GROUP BY time($__interval) fill(null)",
-          "rawQuery": false,
-          "refId": "F",
-          "resultFormat": "time_series",
-          "select": [
-            [
+                "type": "mean"
+              },
+              {
+                "params": [],
+                "type": "difference"
+              },
               {
                 "params": [
-                  "AC_CURRENT_IN"
+                  "* 1000"
                 ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "distinct"
+                "type": "math"
               }
             ]
           ],
           "tags": [
             {
-              "key": "deviceName",
+              "key": "deviceName::tag",
               "operator": "=",
-              "value": "XT-2"
+              "value": "VT-1"
             }
           ]
         }
       ],
-      "title": "Invertors - power in",
+      "title": "Hourly statistics",
       "type": "timeseries"
     }
   ],
   "refresh": "10s",
-  "schemaVersion": 37,
-  "style": "dark",
+  "schemaVersion": 39,
   "tags": [],
   "templating": {
     "list": []
@@ -1168,6 +2502,6 @@
   "timezone": "",
   "title": "Studer monitoring",
   "uid": "wzipokaIz",
-  "version": 21,
+  "version": 27,
   "weekStart": ""
 }
