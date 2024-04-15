@@ -1,7 +1,11 @@
 # Logger for studer
 
-This docker-compose suite is used to collect data from Studer. Destination should be Influx/Grafana (bundled),
-MQTT broker or anyhting that listens for UDP packets (for example Loxone miniserver).
+This docker-compose suite is used to collect data from Studer. Destinations where data are written are:
+- InfluxDB
+- MQTT broker
+- UDP listener packets (for example Loxone miniserver)
+
+Logger is bundled with influxdb/grafana and pre-configured to run without any additional setup when no other transports are required.
 
 ## How to setup
 
@@ -74,8 +78,8 @@ Device names are: battery-N, XT-N, VT-N, VS-N. Script autodetects connected devi
 
 All measurements written into mqtt has the following format:
 
-- Topic name: studer/device/param_name
-- Value
+- Topic name: studer/device_name/param_name
+- Value: value                                
 
 Topic name is always in lowercase.
 
@@ -93,7 +97,7 @@ Note that 'studer' is default topic name, see 'STUDERLOGGER_MQTT_TOPIC' in .env 
 
 All measurements written into udp has the following format:
 
-- deviceName_param_name=value
+- deviceName_paramName=value
 
 Everything is lowercase.
 
