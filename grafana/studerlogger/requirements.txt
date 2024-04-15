@@ -2,3 +2,4 @@
 #xcom-proto>=0.3.5
 influxdb>=5.3.1
 schedule>=1.2.1
+paho-mqtt>=2.0.0

@@ -10,4 +10,4 @@ RUN mkdir /tmp/xcomproto/; cd /tmp/xcomproto; wget https://github.com/dusanmsk/x
 
 COPY *.py /app/
 
-CMD [ "python", "/app/studer2influx.py" ]
+CMD [ "python", "/app/studerlogger.py" ]
