@@ -13,6 +13,7 @@ import sys
 import logging
 
 from measurementprocessors import InfluxDbMeasurementProcessor, UdpMeasurementProcessor, LoggingMeasurementProcessor, MqttMeasurementProcessor
+from Util import XcomMock
 
 
 class Period(Enum):
@@ -116,6 +117,19 @@ log.info("Started")
 
 last_successful_operation = time()
 
+import threading
+class XcomProvider:
+    def __init__(self, xcom):
+        self.xcom = xcom
+        self.lock = threading.Lock()
+
+    def get(self):
+        self.lock.acquire()
+        return self.xcom
+
+    def release(self):
+        self.lock.release()
+
 
 measurementProcessors = []
 if INFLUXDB_HOST and INFLUXDB_PORT:
@@ -123,13 +137,14 @@ if INFLUXDB_HOST and INFLUXDB_PORT:
 if STUDERLOGGER_UDP_HOST and STUDERLOGGER_UDP_PORT:
     measurementProcessors.append(UdpMeasurementProcessor(STUDERLOGGER_UDP_HOST, STUDERLOGGER_UDP_PORT, STUDERLOGGER_UDP_DELIMITER))
 if STUDERLOGGER_MQTT_HOST and STUDERLOGGER_MQTT_PORT and STUDERLOGGER_MQTT_TOPIC:
-    measurementProcessors.append(MqttMeasurementProcessor(STUDERLOGGER_MQTT_HOST, STUDERLOGGER_MQTT_PORT, STUDERLOGGER_MQTT_TOPIC, STUDERLOGGER_MQTT_CLIENT_ID))
+    mqttMeasurementProcessor = MqttMeasurementProcessor(STUDERLOGGER_MQTT_HOST, STUDERLOGGER_MQTT_PORT, STUDERLOGGER_MQTT_TOPIC, STUDERLOGGER_MQTT_CLIENT_ID)
+    measurementProcessors.append(mqttMeasurementProcessor)
 if STUDERLOGGER_LOG_PAYLOADS == 1:
     measurementProcessors.append(LoggingMeasurementProcessor())
 
 log.info("Registered measurement processors: %s", ", ".join([type(mp).__name__ for mp in measurementProcessors]))
 
-def findDevices(xcom):
+def findDevices(xcomProvider):
     """
     This function finds all available devices and updates the global lists of device addresses.
 
@@ -152,30 +167,33 @@ def findDevices(xcom):
     AVAILABLE_VS_ADDRESSES = []
 
     # find all xtm/xth devices
-    for i in range(101,109):
-        try:
-            xcom.getValue(param.AC_CURRENT_OUT, i)
-            log.info(f"Found XTM/H/S device at address {i}")
-            AVAILABLE_XT_ADDRESSES.append(i)
-        except:
-            log.debug(f"Device {i} not found")
-    # find all vt devices
-    for i in range(301,315):
-        try:
-            xcom.getValue(param.PV_POWER, i)
-            log.info(f"Found VT device at address {i}")
-            AVAILABLE_VT_ADDRESSES.append(i)
-        except:
-            log.debug(f"Device {i} not found")
-    # find all vs devices
-    for i in range(701,715):
-        try:
-            xcom.getValue(param.PV_POWER, i)
-            log.info(f"Found VS device at address {i}")
-            AVAILABLE_VS_ADDRESSES.append(i)
-        except:
-            log.debug(f"Device {i} not found")
-
+    try:
+        xcom = xcomProvider.get()
+        for i in range(101,109):
+            try:
+                xcom.getValue(param.AC_CURRENT_OUT, i)
+                log.info(f"Found XTM/H/S device at address {i}")
+                AVAILABLE_XT_ADDRESSES.append(i)
+            except:
+                log.debug(f"Device {i} not found")
+        # find all vt devices
+        for i in range(301,315):
+            try:
+                xcom.getValue(param.PV_POWER, i)
+                log.info(f"Found VT device at address {i}")
+                AVAILABLE_VT_ADDRESSES.append(i)
+            except:
+                log.debug(f"Device {i} not found")
+        # find all vs devices
+        for i in range(701,715):
+            try:
+                xcom.getValue(param.PV_POWER, i)
+                log.info(f"Found VS device at address {i}")
+                AVAILABLE_VS_ADDRESSES.append(i)
+            except:
+                log.debug(f"Device {i} not found")
+    finally:
+        xcomProvider.release()
 
 def getValues(xcom, parameterList, deviceAddresses, periodType, deviceName, deviceAddressMask):
     """
@@ -202,6 +220,7 @@ def getValues(xcom, parameterList, deviceAddresses, periodType, deviceName, devi
                 name = param.name
                 if period == periodType:
                     value = xcom.getValue(param, deviceAddress)
+                    #print(f"Got value {name} for param {param} device at address {deviceAddress}: {value}")
                     measurements[name] = value
             except socket.timeout:      # on socket timeout, do not wait for timeout on every parameter and fail fast
                 log.error(f"Failed to get value {name} for device at address {deviceAddress}, socket timeout")
@@ -230,50 +249,68 @@ def logProgress(successRounds):
     if(successRounds == 1):
         log.info(f"Started receiving studer data")
 
-def readParameters(xcom, periodType):
+def readParameters(xcomProvider, periodType):
     global last_successful_operation
     influxJsonBodies = []
-    influxJsonBodies.extend(getValues(xcom, BATTERY_PARAMETERS, [100], periodType, "battery", 100))
-    influxJsonBodies.extend(getValues(xcom, XT_PARAMETERS, AVAILABLE_XT_ADDRESSES, periodType, "XT", 100))
-    influxJsonBodies.extend(getValues(xcom, VT_PARAMETERS, AVAILABLE_VT_ADDRESSES, periodType, "VT", 300))
-    influxJsonBodies.extend(getValues(xcom, VS_PARAMETERS, AVAILABLE_VS_ADDRESSES, periodType, "VS", 700))
+    try:
+        xcom = xcomProvider.get()
+        influxJsonBodies.extend(getValues(xcom, BATTERY_PARAMETERS, [100], periodType, "battery", 100))
+        influxJsonBodies.extend(getValues(xcom, XT_PARAMETERS, AVAILABLE_XT_ADDRESSES, periodType, "XT", 100))
+        influxJsonBodies.extend(getValues(xcom, VT_PARAMETERS, AVAILABLE_VT_ADDRESSES, periodType, "VT", 300))
+        influxJsonBodies.extend(getValues(xcom, VS_PARAMETERS, AVAILABLE_VS_ADDRESSES, periodType, "VS", 700))
 
-    influxJsonBodies = [entry for entry in influxJsonBodies if entry]       # remove empty lists
-    if (influxJsonBodies):      # distribute data in threads, do not wait for all threads to finish (to prevent blocking other processors for example with dead mqtt server etc...)
-        for measurementProcessor in measurementProcessors:
-            thread = threading.Thread(target=measurementProcessor.processMeasurements, args=(influxJsonBodies,))
-            thread.start()
-        last_successful_operation = time()
+        influxJsonBodies = [entry for entry in influxJsonBodies if entry]       # remove empty lists
+        if (influxJsonBodies):      # distribute data in threads, do not wait for all threads to finish (to prevent blocking other processors for example with dead mqtt server etc...)
+            for measurementProcessor in measurementProcessors:
+                thread = threading.Thread(target=measurementProcessor.processMeasurements, args=(influxJsonBodies,))
+                thread.start()
+            last_successful_operation = time()
+    finally:
+        xcomProvider.release()
 
-def process15min(xcom):
+def process15min(xcomProvider):
     log.info("Processing 15 minutes parameters")
-    readParameters(xcom, Period.QUARTER)
+    try:
+        readParameters(xcomProvider.get(), Period.QUARTER)
+    finally:
+        xcomProvider.release()
 
-def processHourly(xcom):
+def processHourly(xcomProvider):
     log.info("Processing hourly parameters")
-    readParameters(xcom, Period.HOURLY)
+    try:
+        readParameters(xcomProvider.get(), Period.HOURLY)
+    finally:
+        xcomProvider.release()
 
-def processHalfDay(xcom):
+def processHalfDay(xcomProvider):
     log.info("Processing half day parameters")
-    readParameters(xcom, Period.HALF_DAY)
+    try:
+        readParameters(xcomProvider.get(), Period.HALF_DAY)
+    finally:
+        xcomProvider.release()
 
 def main():
+    # TODO remove
+    mqttMeasurementProcessor.setXcomProvider(XcomProvider(XcomMock()))
+
     socket.setdefaulttimeout(STUDERLOGGER_XCOMLAN_SOCKET_TIMEOUT)
-    with XcomLANTCP(port=int(XCOMLAN_LISTEN_PORT)) if XCOMLAN_LISTEN_PORT else XcomRS232(serialDevice=XCOMRS232_SERIAL_PORT, baudrate=int(XCOMRS232_BAUD_RATE)) as xcom:
-        schedule.every(15).minutes.do(process15min, xcom=xcom)
-        schedule.every(1).hours.do(processHourly, xcom=xcom)
-        schedule.every(12).hours.do(processHalfDay, xcom=xcom)
+    with XcomLANTCP(port=int(XCOMLAN_LISTEN_PORT)) if XCOMLAN_LISTEN_PORT else XcomRS232(serialDevice=XCOMRS232_SERIAL_PORT, baudrate=int(XCOMRS232_BAUD_RATE)) as xcom1:
+        xcomProvider = XcomProvider(xcom1)
+        mqttMeasurementProcessor.setXcomProvider(xcomProvider)
+        schedule.every(15).minutes.do(process15min, xcomProvider=xcomProvider)
+        schedule.every(1).hours.do(processHourly, xcomProvider=xcomProvider)
+        schedule.every(12).hours.do(processHalfDay, xcomProvider=xcomProvider)
         while (True):
-            findDevices(xcom)
+            findDevices(xcomProvider)
             successRounds = 0
             while True:
                 try:
-                    readParameters(xcom, Period.PERIODIC)
+                    readParameters(xcomProvider, Period.PERIODIC)
                     # when started, process all scheduled tasks
                     if(successRounds == 0):
                         schedule.run_all()
                     if(successRounds % 10 == 0):
-                        readParameters(xcom, Period.PERIODIC_10)
+                        readParameters(xcomProvider, Period.PERIODIC_10)
                     schedule.run_pending()
                     successRounds += 1
                     logProgress(successRounds)
