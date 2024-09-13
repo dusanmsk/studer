@@ -285,11 +285,11 @@ def processHalfDay(xcomProvider):
 
 def main():
     # TODO remove
-    mqttMeasurementProcessor.setXcomProvider(XcomProvider(XcomMock()))
+    #mqttMeasurementProcessor.setXcomProvider(XcomProvider(XcomMock()))
 
     socket.setdefaulttimeout(STUDERLOGGER_XCOMLAN_SOCKET_TIMEOUT)
-    with XcomLANTCP(port=int(XCOMLAN_LISTEN_PORT)) if XCOMLAN_LISTEN_PORT else XcomRS232(serialDevice=XCOMRS232_SERIAL_PORT, baudrate=int(XCOMRS232_BAUD_RATE)) as xcom1:
-        xcomProvider = XcomProvider(xcom1)
+    with XcomLANTCP(port=int(XCOMLAN_LISTEN_PORT)) if XCOMLAN_LISTEN_PORT else XcomRS232(serialDevice=XCOMRS232_SERIAL_PORT, baudrate=int(XCOMRS232_BAUD_RATE)) as xcom:
+        xcomProvider = XcomProvider(xcom)
         mqttMeasurementProcessor.setXcomProvider(xcomProvider)
         schedule.every(15).minutes.do(process15min, xcomProvider=xcomProvider)
         schedule.every(1).hours.do(processHourly, xcomProvider=xcomProvider)

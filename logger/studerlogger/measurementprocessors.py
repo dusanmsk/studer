@@ -96,6 +96,7 @@ class MqttMeasurementProcessor(AbstractMeasurementProcessor):
                     value = Util.getStuderParameter(self.xcomProvider, parameterName, deviceAddress)
                     self.client.publish(self.cliResponseValueTopic, value)
                 except Exception as e:
+                    self.log.error(e)
                     self.client.publish(self.cliResponseValueTopic, "ERROR")
             elif topic == self.cliSetValueTopic and self.xcomProvider is not None:
                 try:
@@ -106,6 +107,7 @@ class MqttMeasurementProcessor(AbstractMeasurementProcessor):
                     Util.setStuderParameter(self.xcomProvider, parameterName, value, deviceAddress)
                     self.client.publish(self.cliResponseValueTopic, f"Set {payload} OK")
                 except Exception as e:
+                    self.log.error(e)
                     self.client.publish(self.cliResponseValueTopic, f"Set {payload} ERROR")
 
         @self.client.publish_callback()
