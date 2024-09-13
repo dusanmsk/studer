@@ -128,7 +128,10 @@ class XcomProvider:
         return self.xcom
 
     def release(self):
-        self.lock.release()
+        try:
+            self.lock.release()
+        except Exception as ex:
+            log.error(f"Failed to release lock: {ex}")
 
 
 measurementProcessors = []
@@ -270,24 +273,15 @@ def readParameters(xcomProvider, periodType):
 
 def process15min(xcomProvider):
     log.info("Processing 15 minutes parameters")
-    try:
-        readParameters(xcomProvider.get(), Period.QUARTER)
-    finally:
-        xcomProvider.release()
+    readParameters(xcomProvider, Period.QUARTER)
 
 def processHourly(xcomProvider):
     log.info("Processing hourly parameters")
-    try:
-        readParameters(xcomProvider.get(), Period.HOURLY)
-    finally:
-        xcomProvider.release()
+    readParameters(xcomProvider, Period.HOURLY)
 
 def processHalfDay(xcomProvider):
     log.info("Processing half day parameters")
-    try:
-        readParameters(xcomProvider.get(), Period.HALF_DAY)
-    finally:
-        xcomProvider.release()
+    readParameters(xcomProvider, Period.HALF_DAY)
 
 def main():
     # TODO remove
