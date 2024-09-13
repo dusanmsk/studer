@@ -61,8 +61,8 @@ VT_PARAMETERS = [
     [ param.PV_ENERGY_CURR_DAY,  Period.QUARTER ],
     [ param.PV_ENERGY_TOTAL, Period.QUARTER ],
     [ param.PV_SUN_HOURS_CURR_DAY, Period.HOURLY ],
-    #param.PV_OPERATION_MODE,
-    #param.PV_NEXT_EQUAL
+    [ param.PV_OPERATION_MODE, Period.PERIODIC ],
+    [ param.PV_NEXT_EQUAL, Period.HOURLY ]
 ]
 
 VS_PARAMETERS = [
