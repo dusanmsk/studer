@@ -18,7 +18,7 @@ def getStuderParameter(xcomProvider, parameterName, deviceAddress):
         if param:
             xcom = xcomProvider.get()
             if xcom:
-                return xcom.getValue(param, deviceAddress)
+                return xcom.getValue(param, int(deviceAddress))
     finally:
         xcomProvider.release()
 
@@ -29,7 +29,7 @@ def setStuderParameter(xcomProvider, parameterName, value, deviceAddress):
         if param:
             xcom = xcomProvider.get()
             if xcom:
-                return xcom.setValue(param, value, deviceAddress)
+                return xcom.setValue(param, value, int(deviceAddress))
     finally:
         xcomProvider.release()
 
