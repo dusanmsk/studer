@@ -4,8 +4,16 @@ from xcom_proto import XcomP as param
 
 
 def xcomParamFromName(name):
-    if isinstance(name, int):
-        return param.getParamByID(name)
+    # try to parse name as a number
+    paramId = None
+    try:
+        paramId = int(name)
+    except:
+        pass
+    # if param name is number
+    if paramId is not None:
+        return param.getParamByID(paramId)
+    # else use param name
     else:
         for datapoint in param._getDatapoints():
             if datapoint.name == name:
