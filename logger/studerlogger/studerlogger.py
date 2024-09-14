@@ -14,6 +14,7 @@ import logging
 
 from measurementprocessors import InfluxDbMeasurementProcessor, UdpMeasurementProcessor, LoggingMeasurementProcessor, MqttMeasurementProcessor
 from Util import XcomMock
+from clihandler import CliHandler
 
 
 class Period(Enum):
@@ -104,7 +105,7 @@ XCOMRS232_SERIAL_PORT = os.environ.get('STUDERLOGGER_XCOMRS232_SERIAL_PORT')
 XCOMRS232_BAUD_RATE = os.environ.get('STUDERLOGGER_XCOMRS232_BAUD_RATE')
 
 STUDERLOGGER_LOG_PAYLOADS = os.environ.get('STUDERLOGGER_LOG_PAYLOADS', 0)
-
+STUDER_CLI_ENABLED = os.environ.get('STUDER_CLI_ENABLED', 0)
 
 logging.basicConfig(
     stream=sys.stdout,
@@ -284,13 +285,11 @@ def processHalfDay(xcomProvider):
     readParameters(xcomProvider, Period.HALF_DAY)
 
 def main():
-    # TODO remove
-    #mqttMeasurementProcessor.setXcomProvider(XcomProvider(XcomMock()))
-
     socket.setdefaulttimeout(STUDERLOGGER_XCOMLAN_SOCKET_TIMEOUT)
     with XcomLANTCP(port=int(XCOMLAN_LISTEN_PORT)) if XCOMLAN_LISTEN_PORT else XcomRS232(serialDevice=XCOMRS232_SERIAL_PORT, baudrate=int(XCOMRS232_BAUD_RATE)) as xcom:
         xcomProvider = XcomProvider(xcom)
-        mqttMeasurementProcessor.setXcomProvider(xcomProvider)
+        if STUDER_CLI_ENABLED == '1':
+            cliHandler = CliHandler(STUDERLOGGER_MQTT_HOST, STUDERLOGGER_MQTT_PORT, STUDERLOGGER_MQTT_TOPIC, 'studer_cli', xcomProvider)        # start mqtt cli handler
         schedule.every(15).minutes.do(process15min, xcomProvider=xcomProvider)
         schedule.every(1).hours.do(processHourly, xcomProvider=xcomProvider)
         schedule.every(12).hours.do(processHalfDay, xcomProvider=xcomProvider)
