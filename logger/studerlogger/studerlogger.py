@@ -123,17 +123,26 @@ class XcomProvider:
     def __init__(self, xcom):
         self.xcom = xcom
         self.lock = threading.Lock()
+        self.timer = None
 
     def get(self):
         self.lock.acquire()
+        self.start_timer()
         return self.xcom
 
     def release(self):
+        if self.timer:
+            self.timer.cancel()
         try:
             self.lock.release()
         except Exception as ex:
             log.error(f"Failed to release lock: {ex}")
 
+    def start_timer(self):
+        if self.timer:
+            self.timer.cancel()
+        self.timer = threading.Timer(20, self.release)
+        self.timer.start()
 
 measurementProcessors = []
 if INFLUXDB_HOST and INFLUXDB_PORT:
