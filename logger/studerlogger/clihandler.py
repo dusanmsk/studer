@@ -89,23 +89,18 @@ class CliHandler:
         return None
 
     def getStuderParameter(self, parameterName, deviceAddress):
-        try:
-            param = self.xcomParamFromName(parameterName)
-            if param:
+        param = self.xcomParamFromName(parameterName)
+        if param:
+            with self.xcomProvider:
                 xcom = self.xcomProvider.get()
                 if xcom:
                     return xcom.getValue(param, int(deviceAddress))
-        finally:
-            self.xcomProvider.release()
 
 
     def setStuderParameter(self, parameterName, value, deviceAddress):
-        try:
-            param = self.xcomParamFromName(parameterName)
-            if param:
+        param = self.xcomParamFromName(parameterName)
+        if param:
+            with self.xcomProvider:
                 xcom = self.xcomProvider.get()
                 if xcom:
                     return xcom.setValue(param, value, int(deviceAddress))
-        finally:
-            self.xcomProvider.release()
-
