@@ -56,9 +56,6 @@ class UdpMeasurementProcessor(AbstractMeasurementProcessor):
 class MqttMeasurementProcessor(AbstractMeasurementProcessor):
 
     def __init__(self, HOST, PORT, TOPIC, CLIENT_ID=""):
-        self.cliGetValueTopic = "studercli/value/get"
-        self.cliSetValueTopic = "studercli/value/set"
-        self.cliResponseValueTopic = "studercli/response"
         self.log = logging.getLogger("MqttProcessor")
         self.host = HOST
         self.port = PORT
@@ -67,7 +64,6 @@ class MqttMeasurementProcessor(AbstractMeasurementProcessor):
         self.client = mqtt.Client(CallbackAPIVersion.VERSION2)
         self.client.connect(self.host, self.port, 60)
         self.client.loop_start()
-        self.xcomProvider = None
         self.log.info("MqttMeasurementProcessor initialized")
 
         @self.client.connect_fail_callback()
@@ -78,41 +74,16 @@ class MqttMeasurementProcessor(AbstractMeasurementProcessor):
         def on_connect(client, userdata, flags, reason_code, properties):
             if reason_code == 0:
                 self.log.info("Connected")
-                client.subscribe(self.cliGetValueTopic)
-                client.subscribe(self.cliSetValueTopic)
-                self.log.info("CLI subscribed")
             else:
                 self.log.error(f"Failed to connect. Reason code: {reason_code}")
 
         @self.client.message_callback()
         def on_message(client, userdata, message):
-            topic = message.topic
-            payload = message.payload.decode('utf-8')
-            if topic == self.cliGetValueTopic and self.xcomProvider is not None:
-                try:
-                    splt = payload.split(" ")
-                    parameterName = splt[0]
-                    deviceAddress = splt[1]
-                    value = Util.getStuderParameter(self.xcomProvider, parameterName, deviceAddress)
-                    self.client.publish(self.cliResponseValueTopic, value)
-                except Exception as e:
-                    self.log.error(e)
-                    self.client.publish(self.cliResponseValueTopic, "ERROR")
-            elif topic == self.cliSetValueTopic and self.xcomProvider is not None:
-                try:
-                    splt = payload.split(" ")
-                    parameterName = splt[0]
-                    value = splt[1]
-                    deviceAddress = splt[2]
-                    Util.setStuderParameter(self.xcomProvider, parameterName, value, deviceAddress)
-                    self.client.publish(self.cliResponseValueTopic, f"Set {payload} OK")
-                except Exception as e:
-                    self.log.error(e)
-                    self.client.publish(self.cliResponseValueTopic, f"Set {payload} ERROR")
+            pass
 
         @self.client.publish_callback()
         def on_publish(client, userdata, mid, reason_code, properties):
-            self.log.debug("Message sent")
+            pass
 
         @self.client.disconnect_callback()
         def on_disconnect(client, userdata, disconnect_flags, reason_code, properties):
@@ -137,10 +108,6 @@ class MqttMeasurementProcessor(AbstractMeasurementProcessor):
                 topic= self.createTopicName(self.topic, deviceName, measurementName)
                 logging.debug(f"Publishing to {topic}: {measurementValue}")
                 self.client.publish(topic, measurementValue)
-
-    def setXcomProvider(self, xcomProvider):
-        self.xcomProvider = xcomProvider
-
 
 class LoggingMeasurementProcessor(AbstractMeasurementProcessor):
 
