@@ -118,31 +118,22 @@ log.info("Started")
 
 last_successful_operation = time()
 
-import threading
 class XcomProvider:
     def __init__(self, xcom):
         self.xcom = xcom
         self.lock = threading.Lock()
-        self.timer = None
+
+    def __enter__(self):
+        self.lock.acquire()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.lock.release()
+        return True
 
     def get(self):
-        self.lock.acquire()
-        self.start_timer()
         return self.xcom
 
-    def release(self):
-        if self.timer:
-            self.timer.cancel()
-        try:
-            self.lock.release()
-        except Exception as ex:
-            log.error(f"Failed to release lock: {ex}")
-
-    def start_timer(self):
-        if self.timer:
-            self.timer.cancel()
-        self.timer = threading.Timer(20, self.release)
-        self.timer.start()
 
 measurementProcessors = []
 if INFLUXDB_HOST and INFLUXDB_PORT:
@@ -180,7 +171,7 @@ def findDevices(xcomProvider):
     AVAILABLE_VS_ADDRESSES = []
 
     # find all xtm/xth devices
-    try:
+    with xcomProvider:
         xcom = xcomProvider.get()
         for i in range(101,109):
             try:
@@ -205,8 +196,6 @@ def findDevices(xcomProvider):
                 AVAILABLE_VS_ADDRESSES.append(i)
             except:
                 log.debug(f"Device {i} not found")
-    finally:
-        xcomProvider.release()
 
 def getValues(xcom, parameterList, deviceAddresses, periodType, deviceName, deviceAddressMask):
     """
@@ -265,21 +254,18 @@ def logProgress(successRounds):
 def readParameters(xcomProvider, periodType):
     global last_successful_operation
     influxJsonBodies = []
-    try:
+    with xcomProvider:
         xcom = xcomProvider.get()
         influxJsonBodies.extend(getValues(xcom, BATTERY_PARAMETERS, [100], periodType, "battery", 100))
         influxJsonBodies.extend(getValues(xcom, XT_PARAMETERS, AVAILABLE_XT_ADDRESSES, periodType, "XT", 100))
         influxJsonBodies.extend(getValues(xcom, VT_PARAMETERS, AVAILABLE_VT_ADDRESSES, periodType, "VT", 300))
         influxJsonBodies.extend(getValues(xcom, VS_PARAMETERS, AVAILABLE_VS_ADDRESSES, periodType, "VS", 700))
-
         influxJsonBodies = [entry for entry in influxJsonBodies if entry]       # remove empty lists
         if (influxJsonBodies):      # distribute data in threads, do not wait for all threads to finish (to prevent blocking other processors for example with dead mqtt server etc...)
             for measurementProcessor in measurementProcessors:
                 thread = threading.Thread(target=measurementProcessor.processMeasurements, args=(influxJsonBodies,))
                 thread.start()
             last_successful_operation = time()
-    finally:
-        xcomProvider.release()
 
 def process15min(xcomProvider):
     log.info("Processing 15 minutes parameters")

@@ -5,7 +5,7 @@ MQTT_HOST="nas"
 RESPONSE_TOPIC="studercli/response"
 SUB_PID='None'
 subscribe_and_print_response() {
-    mosquitto_sub -h $MQTT_HOST -t $RESPONSE_TOPIC -C 1 &
+    mosquitto_sub -h $MQTT_HOST -t $RESPONSE_TOPIC -W 5 -C 1 &
     SUB_PID=$!
 }
 
