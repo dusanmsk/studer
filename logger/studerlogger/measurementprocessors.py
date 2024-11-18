@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 from abc import abstractmethod
@@ -100,7 +101,7 @@ class MqttMeasurementProcessor(AbstractMeasurementProcessor):
                 logging.debug(f"Publishing to {topic}: {measurementValue}")
                 self.client.publish(topic, measurementValue)
         # send measurements in one message
-        self.client.publish(f"{self.topic}/measurements", measurements)
+        self.client.publish(f"{self.topic}/measurements", json.dumps(measurements))
 
 
 class LoggingMeasurementProcessor(AbstractMeasurementProcessor):
