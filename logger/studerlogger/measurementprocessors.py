@@ -101,7 +101,7 @@ class MqttMeasurementProcessor(AbstractMeasurementProcessor):
                 logging.debug(f"Publishing to {topic}: {measurementValue}")
                 self.client.publish(topic, measurementValue)
         # send measurements in one message
-        self.client.publish(f"{self.topic}/measurements", json.dumps(measurements))
+        self.client.publish(f"{self.topic}/measurements".replace("//", "/").lower(), json.dumps(measurements))
 
 
 class LoggingMeasurementProcessor(AbstractMeasurementProcessor):
