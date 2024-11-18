@@ -30,7 +30,7 @@ Connect computer serial port with xcom-rs232, then "TODO binding serial port to 
 
 #### Run docker-compose
 
-Enable debugging for a while (edit .env then set STUDERLOGGER_DEBUG=1). Now run docker in foreground `./bin/run_all.sh` and watch for logs. You should see something like:
+Enable debugging for a while (edit .env then set DEBUG=1). Now run docker in foreground `./bin/run_all.sh` and watch for logs. You should see something like:
 
 `Written to influx: [{'measurement': 'solar_data', 'tags': {'deviceName': 'battery-0'}, 'fields': {'BATT_SOC': 99.0, 'BATT_TEMP': 26.296875,...`
 
@@ -91,7 +91,7 @@ studer/battery_0/batt_voltage 49.5625
 studer/xt_1/ac_freq_in 49.984375
 ```
 
-Note that 'studer' is default topic name, see 'STUDERLOGGER_MQTT_TOPIC' in .env file
+Note that 'studer' is default topic name, see 'MQTT_TOPIC' in .env file
 
 #### UDP
 
