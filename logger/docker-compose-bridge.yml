@@ -8,4 +8,4 @@ services:
     env_file:
       - .env
     ports:
-      - "${STUDERLOGGER_XCOMLAN_LISTEN_PORT}:${STUDERLOGGER_XCOMLAN_LISTEN_PORT}"
+      - "${XCOMLAN_LISTEN_PORT}:${XCOMLAN_LISTEN_PORT}"

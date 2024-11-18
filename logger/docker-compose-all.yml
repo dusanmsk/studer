@@ -14,7 +14,7 @@ services:
       - "8086:8086"
       - "25826:25826/udp"
     volumes:
-      - ${STUDERLOGGER_DATADIR}/influxdb:/var/lib/influxdb
+      - ${DATADIR}/influxdb:/var/lib/influxdb
     environment:
       - INFLUXDB_USER=grafana
       - INFLUXDB_USER_PASSWORD=grafana
@@ -25,7 +25,7 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ${STUDERLOGGER_DATADIR}/grafana:/var/lib/grafana
+      - ${DATADIR}/grafana:/var/lib/grafana
     user: "0"
 
   mosquitto:
@@ -42,4 +42,4 @@ services:
     env_file:
       - .env
     ports:
-      - "${STUDERLOGGER_XCOMLAN_LISTEN_PORT}:${STUDERLOGGER_XCOMLAN_LISTEN_PORT}"
+      - "${XCOMLAN_LISTEN_PORT}:${XCOMLAN_LISTEN_PORT}"
