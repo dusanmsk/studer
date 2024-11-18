@@ -92,12 +92,16 @@ class MqttMeasurementProcessor(AbstractMeasurementProcessor):
         for m in measurements:
             deviceName = m['tags']['deviceName']
             fields = m['fields']
+            # send measurements as individual messages
             for f in fields:
                 measurementName = f
                 measurementValue = fields[f]
-                topic= self.createTopicName(self.topic, deviceName, measurementName)
+                topic = self.createTopicName(self.topic, deviceName, measurementName)
                 logging.debug(f"Publishing to {topic}: {measurementValue}")
                 self.client.publish(topic, measurementValue)
+        # send measurements in one message
+        self.client.publish(f"{self.topic}/measurements", measurements)
+
 
 class LoggingMeasurementProcessor(AbstractMeasurementProcessor):
 
