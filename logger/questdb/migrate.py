@@ -1,5 +1,6 @@
 import concurrent.futures
 import datetime
+import gc
 import logging
 import os
 
@@ -10,7 +11,7 @@ from tqdm import tqdm
 import questdb.ingress
 
 parallel_jobs = int(os.cpu_count() / 2)
-batch_size = 10000
+batch_size = 50000
 
 # Nastavenie InfluxDB klienta
 influx_host = "localhost"
@@ -27,24 +28,29 @@ auto_flush_rows = 1000
 auto_flush_interval = 300000
 questdb_studer_table = "studer"
 
-influx_client = None
 main_progressbar = None
 do_shutdown = False
 
+def create_influx_client():
+    global influx_host, influx_port, influx_user, influx_password, influx_db
+    influx_client = InfluxDBClient(host=influx_host, port=influx_port, username=influx_user, password=influx_password)
+    influx_client.switch_database(influx_db)
+    return influx_client
 
 def get_influx_count(measurement, where=None):
-    try:
-        query = f"SELECT COUNT(*) FROM {measurement}" + f" WHERE {where}" if where else ""
-        results = influx_client.query(query)
-        points = list(results.get_points())
-        if not points:
+    with create_influx_client() as influx_client:
+        try:
+            query = f"SELECT COUNT(*) FROM {measurement}" + f" WHERE {where}" if where else ""
+            results = influx_client.query(query)
+            points = list(results.get_points())
+            if not points:
+                return 0
+            integer_values = [value for value in points[0].values() if isinstance(value, int)]
+            max_value = max(integer_values, default=None)
+            return max_value
+        except Exception as e:
+            print(f"Failed to get count for {measurement}: {e}")
             return 0
-        integer_values = [value for value in points[0].values() if isinstance(value, int)]
-        max_value = max(integer_values, default=None)
-        return max_value
-    except Exception as e:
-        print(f"Failed to get count for {measurement}: {e}")
-        return 0
 
 
 def get_questdb_oldest_timestamp(measurement):
@@ -54,8 +60,9 @@ def get_questdb_oldest_timestamp(measurement):
     date = datetime.datetime.now()
     if response.status_code == 200:
         results = response.json()
-        date_str = results['dataset'][0][0]
-        date = parse_timestamp(date_str)
+        if results['dataset']:
+            date_str = results['dataset'][0][0]
+            date = parse_timestamp(date_str)
     return date
 
 
@@ -106,49 +113,34 @@ def insert_to_questdb(measurement_name, data):
 
 
 def do_export(measurement):
-    try:
-        questdb_oldest_timestamp = get_questdb_oldest_timestamp(measurement)
-        offset = 0
-        influx_time_where = f"time < {to_epoch(questdb_oldest_timestamp)}"
-        total_rows = get_influx_count(measurement, influx_time_where)
-        pbar = tqdm(total=total_rows, desc=measurement, leave=False)
-        while True:
-            global do_shutdown
-            if do_shutdown:
-                break
-            query = f"SELECT * FROM {measurement} WHERE {influx_time_where} ORDER BY time DESC LIMIT {batch_size} OFFSET {offset}"
-            results = influx_client.query(query, epoch='ns')
-            points = list(results.get_points())
-            if not points:
-                break
-            insert_to_questdb(measurement, points)
-            pbar.update(len(points))
-            offset += batch_size
+    global questdb_studer_table
+    with create_influx_client() as influx_client:
+        try:
+            timestamp_before = to_epoch(get_questdb_oldest_timestamp(questdb_studer_table))
+            total_rows = get_influx_count(measurement, f"time < {timestamp_before}")
+            pbar = tqdm(total=total_rows, desc=measurement, leave=False)
+            lowest_timestamp = timestamp_before
+            while True:
+                global do_shutdown
+                if do_shutdown:
+                    break
+                query = f"SELECT * FROM {measurement} WHERE time < {lowest_timestamp} ORDER BY time DESC LIMIT {batch_size}"
+                results = influx_client.query(query, epoch='ns')
+                points = list(results.get_points())
+                if not points:
+                    break
+                lowest_timestamp = points[-1]['time']
+                insert_to_questdb(measurement, points)
+                pbar.update(len(points))
+            pbar.close()
 
-        pbar.close()
-
-    except Exception as e:
-        # todo log to file
-        print(f"Failed to export {measurement}: {e}")
-
-    finally:
-        global main_progressbar
-        main_progressbar.update(1)
-
+        except Exception as e:
+            # todo log to file
+            print(f"Failed to export {measurement}: {e}")
 
 def main():
-
-    global influx_client
-
-    influx_client = InfluxDBClient(host=influx_host, port=influx_port, username=influx_user, password=influx_password)
-    influx_client.switch_database(influx_db)
-
-
     do_export('solar_data')
-
-    influx_client.close()
     print("Migration done")
-
 
 if __name__ == "__main__":
     main()
