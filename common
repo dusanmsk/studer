@@ -1,0 +1,9 @@
+
+# prepare COMPOSE_FILE environment variable by reading enabled services from .env file
+COMPOSE_FILE=""
+source .env
+if [ "$STUDERLOGGER_ENABLED" == "true" ]; then
+    COMPOSE_FILE="$COMPOSE_FILE:docker-compose.studerlogger.yml"
+fi
+COMPOSE_FILE=${COMPOSE_FILE:1}
+export COMPOSE_FILE
