@@ -9,7 +9,7 @@ import random
 import paho.mqtt.client as mqtt
 from influxdb import InfluxDBClient
 from paho.mqtt.enums import CallbackAPIVersion
-
+from questdb.ingress import Sender, TimestampNanos
 
 class AbstractMeasurementProcessor():
 
@@ -111,3 +111,23 @@ class LoggingMeasurementProcessor(AbstractMeasurementProcessor):
 
     def processMeasurements(self, measurements):
         self.log.info(f"Logging measurements: {measurements}")
+
+
+class QuestDbMeasurementProcessor(AbstractMeasurementProcessor):
+    def __init__(self, questdb_host, questdb_port, questdb_username, questdb_password, questdb_table):
+        self.log =  logging.getLogger("QuestDbProcessor")
+        self.auto_flush_rows = 1000
+        self.auto_flush_interval = 10000
+        conf = f'http::addr={questdb_host}:{questdb_port};username={questdb_username};password={questdb_password};auto_flush_rows={self.auto_flush_rows};auto_flush_interval={self.auto_flush_interval};'
+        self.questdb_sender = Sender.from_conf(conf)
+        self.questdb_sender.establish()
+        self.questdb_table = questdb_table
+    def processMeasurements(self, measurements):
+        for measurement in measurements:
+            device_name = measurement['tags']['deviceName']
+            self.questdb_sender.row(
+                self.questdb_table,
+                symbols={'device': device_name},
+                columns=measurement['fields'],
+                at=TimestampNanos.now()
+            )

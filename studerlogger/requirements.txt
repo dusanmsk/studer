@@ -3,3 +3,6 @@
 influxdb>=5.3.1
 schedule>=1.2.1
 paho-mqtt>=2.0.0
+str2bool
+py-questdb
+#debugpy

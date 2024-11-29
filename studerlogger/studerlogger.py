@@ -12,7 +12,8 @@ import os
 import sys
 import logging
 
-from measurementprocessors import InfluxDbMeasurementProcessor, UdpMeasurementProcessor, LoggingMeasurementProcessor, MqttMeasurementProcessor
+from measurementprocessors import InfluxDbMeasurementProcessor, UdpMeasurementProcessor, LoggingMeasurementProcessor, MqttMeasurementProcessor, \
+    QuestDbMeasurementProcessor
 
 
 class Period(Enum):
@@ -96,6 +97,12 @@ MQTT_PORT = int(os.environ.get('MQTT_PORT', -1))
 MQTT_TOPIC = os.environ.get('MQTT_TOPIC')
 MQTT_CLIENT_ID = os.environ.get('MQTT_CLIENT_ID', 'studer')
 
+QUESTDB_HOST = os.environ.get('QUESTDB_HOST')
+QUESTDB_PORT = os.environ.get('QUESTDB_PORT')
+QUESTDB_USERNAME = os.environ.get('QUESTDB_USERNAME')
+QUESTDB_PASSWORD = os.environ.get('QUESTDB_PASSWORD')
+QUESTDB_TABLE = os.environ.get('QUESTDB_TABLE', 'studer')
+
 # xcom properties
 XCOMLAN_LISTEN_PORT = os.environ.get('XCOMLAN_LISTEN_PORT')
 XCOMLAN_SOCKET_TIMEOUT = int(os.environ.get('XCOMLAN_SOCKET_TIMEOUT'))
@@ -124,6 +131,8 @@ if UDP_HOST and UDP_PORT:
     measurementProcessors.append(UdpMeasurementProcessor(UDP_HOST, UDP_PORT, UDP_DELIMITER))
 if MQTT_HOST and MQTT_PORT and MQTT_TOPIC:
     measurementProcessors.append(MqttMeasurementProcessor(MQTT_HOST, MQTT_PORT, MQTT_TOPIC, MQTT_CLIENT_ID))
+if QUESTDB_HOST and QUESTDB_PORT:
+    measurementProcessors.append(QuestDbMeasurementProcessor(QUESTDB_HOST, QUESTDB_PORT, QUESTDB_USERNAME, QUESTDB_PASSWORD, QUESTDB_TABLE))
 if LOG_PAYLOADS == 1:
     measurementProcessors.append(LoggingMeasurementProcessor())
 
